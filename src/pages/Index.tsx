@@ -1,10 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { usePomodoro } from '@/hooks/usePomodoro';
+import { useAudioSettings } from '@/hooks/useAudioSettings';
+import { useAudioPlayer } from '@/hooks/useAudioPlayer';
 import { TimerRing } from '@/components/TimerRing';
 import { ModeIndicator } from '@/components/ModeIndicator';
 import { ControlButton } from '@/components/ControlButton';
-import { SpotifyToggle } from '@/components/SpotifyToggle';
+import { MusicToggle } from '@/components/MusicToggle';
+import { AudioSettingsModal } from '@/components/AudioSettingsModal';
 import { ModeSwitcher } from '@/components/ModeSwitcher';
 
 const Index = () => {
@@ -15,13 +18,35 @@ const Index = () => {
     sessionsBeforeLongBreak: 4,
   });
 
-  const [spotifyPlaying, setSpotifyPlaying] = useState(false);
+  const audioSettings = useAudioSettings();
+  const [musicEnabled, setMusicEnabled] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const previousModeRef = useRef(pomodoro.mode);
 
-  const handleSpotifyToggle = () => {
-    setSpotifyPlaying(prev => !prev);
-    // TODO: Integrate with Spotify API
-    // For now, this is a placeholder that toggles the UI state
+  // Use audio player hook
+  useAudioPlayer({
+    settings: audioSettings.settings,
+    mode: pomodoro.mode,
+    isRunning: pomodoro.isRunning && musicEnabled,
+  });
+
+  // Detect mode transitions for chime
+  useEffect(() => {
+    if (previousModeRef.current === 'focus' && pomodoro.mode === 'break') {
+      // Mode just changed to break - chime is handled by useAudioPlayer
+    }
+    previousModeRef.current = pomodoro.mode;
+  }, [pomodoro.mode]);
+
+  const handleMusicToggle = () => {
+    setMusicEnabled(prev => !prev);
   };
+
+  const hasAudioConfigured = !!(
+    audioSettings.settings.focusMusic || 
+    audioSettings.settings.breakMusic || 
+    audioSettings.settings.breakChime
+  );
 
   return (
     <main 
@@ -73,22 +98,40 @@ const Index = () => {
         />
       </motion.section>
 
-      {/* Footer with Spotify toggle */}
+      {/* Footer with Music toggle */}
       <motion.footer
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.2 }}
         className="flex flex-col items-center gap-4"
       >
-        <SpotifyToggle
+        <MusicToggle
           mode={pomodoro.mode}
-          isPlaying={spotifyPlaying}
-          onToggle={handleSpotifyToggle}
+          isPlaying={musicEnabled && pomodoro.isRunning}
+          hasAudioConfigured={hasAudioConfigured}
+          onToggle={handleMusicToggle}
+          onOpenSettings={() => setSettingsOpen(true)}
         />
         <p className="text-xs text-muted-foreground">
-          Tap to control music during sessions
+          {hasAudioConfigured 
+            ? 'Tap to control music • Settings for audio files' 
+            : 'Tap settings to add your music files'}
         </p>
       </motion.footer>
+
+      {/* Audio Settings Modal */}
+      <AudioSettingsModal
+        isOpen={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        settings={audioSettings.settings}
+        onSetFocusMusic={audioSettings.setFocusMusic}
+        onSetBreakChime={audioSettings.setBreakChime}
+        onSetBreakMusic={audioSettings.setBreakMusic}
+        onToggleFocusMusic={audioSettings.toggleFocusMusic}
+        onToggleBreakChime={audioSettings.toggleBreakChime}
+        onToggleBreakMusic={audioSettings.toggleBreakMusic}
+        onSetVolume={audioSettings.setVolume}
+      />
     </main>
   );
 };
