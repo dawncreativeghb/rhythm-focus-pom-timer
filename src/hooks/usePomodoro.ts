@@ -4,7 +4,9 @@ export type TimerMode = 'focus' | 'break';
 
 interface PomodoroSettings {
   focusDuration: number; // in minutes
-  breakDuration: number; // in minutes
+  shortBreakDuration: number; // in minutes
+  longBreakDuration: number; // in minutes
+  sessionsBeforeLongBreak: number; // number of focus sessions before long break
 }
 
 interface PomodoroState {
@@ -17,7 +19,9 @@ interface PomodoroState {
 
 const DEFAULT_SETTINGS: PomodoroSettings = {
   focusDuration: 25,
-  breakDuration: 5,
+  shortBreakDuration: 5,
+  longBreakDuration: 30,
+  sessionsBeforeLongBreak: 4,
 };
 
 export function usePomodoro(settings: PomodoroSettings = DEFAULT_SETTINGS) {
@@ -27,9 +31,16 @@ export function usePomodoro(settings: PomodoroSettings = DEFAULT_SETTINGS) {
   const [sessionsCompleted, setSessionsCompleted] = useState(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Determine if this break should be a long break
+  const isLongBreak = sessionsCompleted > 0 && sessionsCompleted % settings.sessionsBeforeLongBreak === 0;
+  
+  const getBreakDuration = () => {
+    return isLongBreak ? settings.longBreakDuration : settings.shortBreakDuration;
+  };
+
   const totalTime = mode === 'focus' 
     ? settings.focusDuration * 60 
-    : settings.breakDuration * 60;
+    : getBreakDuration() * 60;
 
   const progress = 1 - (timeRemaining / totalTime);
 
@@ -49,27 +60,30 @@ export function usePomodoro(settings: PomodoroSettings = DEFAULT_SETTINGS) {
     setIsRunning(false);
     setTimeRemaining(mode === 'focus' 
       ? settings.focusDuration * 60 
-      : settings.breakDuration * 60
+      : getBreakDuration() * 60
     );
   }, [mode, settings]);
 
-  const switchMode = useCallback((newMode: TimerMode) => {
+  const switchMode = useCallback((newMode: TimerMode, nextSessionCount?: number) => {
     setMode(newMode);
     setIsRunning(false);
+    const sessCount = nextSessionCount ?? sessionsCompleted;
+    const willBeLongBreak = newMode === 'break' && sessCount > 0 && sessCount % settings.sessionsBeforeLongBreak === 0;
     setTimeRemaining(newMode === 'focus' 
       ? settings.focusDuration * 60 
-      : settings.breakDuration * 60
+      : (willBeLongBreak ? settings.longBreakDuration : settings.shortBreakDuration) * 60
     );
-  }, [settings]);
+  }, [settings, sessionsCompleted]);
 
   const skipToNext = useCallback(() => {
     if (mode === 'focus') {
-      setSessionsCompleted(prev => prev + 1);
-      switchMode('break');
+      const newCount = sessionsCompleted + 1;
+      setSessionsCompleted(newCount);
+      switchMode('break', newCount);
     } else {
       switchMode('focus');
     }
-  }, [mode, switchMode]);
+  }, [mode, switchMode, sessionsCompleted]);
 
   // Timer effect
   useEffect(() => {
@@ -79,9 +93,12 @@ export function usePomodoro(settings: PomodoroSettings = DEFAULT_SETTINGS) {
           if (prev <= 1) {
             // Timer complete
             if (mode === 'focus') {
-              setSessionsCompleted(s => s + 1);
+              const newSessionCount = sessionsCompleted + 1;
+              setSessionsCompleted(newSessionCount);
               setMode('break');
-              return settings.breakDuration * 60;
+              // Check if this should be a long break (every 4th session)
+              const shouldBeLongBreak = newSessionCount % settings.sessionsBeforeLongBreak === 0;
+              return shouldBeLongBreak ? settings.longBreakDuration * 60 : settings.shortBreakDuration * 60;
             } else {
               setMode('focus');
               return settings.focusDuration * 60;
