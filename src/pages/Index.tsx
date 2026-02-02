@@ -10,7 +10,9 @@ import { ModeSwitcher } from '@/components/ModeSwitcher';
 const Index = () => {
   const pomodoro = usePomodoro({
     focusDuration: 25,
-    breakDuration: 5,
+    shortBreakDuration: 5,
+    longBreakDuration: 30,
+    sessionsBeforeLongBreak: 4,
   });
 
   const [spotifyPlaying, setSpotifyPlaying] = useState(false);
