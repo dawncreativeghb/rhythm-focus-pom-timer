@@ -47,6 +47,14 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        break: {
+          DEFAULT: "hsl(var(--break))",
+          foreground: "hsl(var(--break-foreground))",
+        },
+        spotify: {
+          DEFAULT: "hsl(var(--spotify))",
+          foreground: "hsl(var(--spotify-foreground))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
