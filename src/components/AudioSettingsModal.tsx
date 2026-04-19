@@ -1,11 +1,23 @@
 import { useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings, Upload, Volume2, Trash2, Music, Bell, X } from 'lucide-react';
+import { Settings, Upload, Volume2, Trash2, Music, Bell, X, Loader2, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import type { AudioSettings } from '@/hooks/useAudioSettings';
+
+interface SpotifyState {
+  isConnected: boolean;
+  isPremium: boolean;
+  profile: { display_name: string; product: string } | null;
+  playerReady: boolean;
+  isLoading: boolean;
+  error: string | null;
+  connect: () => void;
+  disconnect: () => void;
+}
 
 interface AudioSettingsModalProps {
   isOpen: boolean;
@@ -18,6 +30,11 @@ interface AudioSettingsModalProps {
   onToggleBreakChime: () => void;
   onToggleBreakMusic: () => void;
   onSetVolume: (volume: number) => void;
+  onSetSpotifyFocusUri: (uri: string) => void;
+  onSetSpotifyBreakUri: (uri: string) => void;
+  onToggleUseSpotifyForFocus: () => void;
+  onToggleUseSpotifyForBreak: () => void;
+  spotify: SpotifyState;
 }
 
 interface FileUploadRowProps {
@@ -31,23 +48,21 @@ interface FileUploadRowProps {
   accept?: string;
 }
 
-function FileUploadRow({ 
-  label, 
-  description, 
-  icon, 
-  file, 
-  enabled, 
-  onToggle, 
+function FileUploadRow({
+  label,
+  description,
+  icon,
+  file,
+  enabled,
+  onToggle,
   onFileSelect,
-  accept = 'audio/*'
+  accept = 'audio/*',
 }: FileUploadRowProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
-      onFileSelect(selectedFile);
-    }
+    if (selectedFile) onFileSelect(selectedFile);
   };
 
   return (
@@ -64,7 +79,7 @@ function FileUploadRow({
         </div>
         <Switch checked={enabled} onCheckedChange={onToggle} />
       </div>
-      
+
       <div className="flex items-center gap-2">
         <input
           ref={inputRef}
@@ -84,9 +99,7 @@ function FileUploadRow({
         </Button>
         {file && (
           <>
-            <span className="flex-1 truncate text-sm text-muted-foreground">
-              {file.name}
-            </span>
+            <span className="flex-1 truncate text-sm text-muted-foreground">{file.name}</span>
             <Button
               variant="ghost"
               size="icon"
@@ -113,12 +126,16 @@ export function AudioSettingsModal({
   onToggleBreakChime,
   onToggleBreakMusic,
   onSetVolume,
+  onSetSpotifyFocusUri,
+  onSetSpotifyBreakUri,
+  onToggleUseSpotifyForFocus,
+  onToggleUseSpotifyForBreak,
+  spotify,
 }: AudioSettingsModalProps) {
   return (
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -126,16 +143,14 @@ export function AudioSettingsModal({
             className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm"
             onClick={onClose}
           />
-          
-          {/* Modal */}
+
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-card p-6 shadow-xl"
+            className="fixed left-1/2 top-1/2 z-50 max-h-[90vh] w-full max-w-md -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-2xl bg-card p-6 shadow-xl"
           >
-            {/* Header */}
             <div className="mb-6 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/20 text-primary">
@@ -148,9 +163,8 @@ export function AudioSettingsModal({
               </Button>
             </div>
 
-            {/* Content */}
             <div className="flex flex-col gap-4">
-              {/* Volume Slider */}
+              {/* Volume */}
               <div className="flex flex-col gap-3 rounded-lg bg-secondary/50 p-4">
                 <div className="flex items-center gap-3">
                   <Volume2 className="h-5 w-5 text-primary" />
@@ -168,7 +182,87 @@ export function AudioSettingsModal({
                 />
               </div>
 
-              {/* Focus Music */}
+              {/* Spotify */}
+              <div className="flex flex-col gap-3 rounded-lg border border-primary/30 bg-secondary/50 p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1DB954]/20 text-[#1DB954]">
+                      <Music className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground">Spotify</p>
+                      <p className="text-xs text-muted-foreground">
+                        {spotify.isConnected
+                          ? spotify.profile
+                            ? `${spotify.profile.display_name} • ${spotify.profile.product}`
+                            : 'Connected'
+                          : 'Premium required for playback'}
+                      </p>
+                    </div>
+                  </div>
+                  {spotify.isConnected ? (
+                    <Button variant="outline" size="sm" onClick={spotify.disconnect}>
+                      Disconnect
+                    </Button>
+                  ) : (
+                    <Button size="sm" onClick={spotify.connect} disabled={spotify.isLoading}>
+                      {spotify.isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Connect'}
+                    </Button>
+                  )}
+                </div>
+
+                {spotify.error && (
+                  <p className="text-xs text-destructive">{spotify.error}</p>
+                )}
+
+                {spotify.isConnected && !spotify.isPremium && spotify.profile && (
+                  <p className="text-xs text-destructive">
+                    Spotify Premium is required to control playback from this app.
+                  </p>
+                )}
+
+                {spotify.isConnected && (
+                  <div className="flex flex-col gap-3 border-t border-border/50 pt-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <Label className="text-xs">Use Spotify for Focus</Label>
+                      <Switch
+                        checked={settings.useSpotifyForFocus}
+                        onCheckedChange={onToggleUseSpotifyForFocus}
+                      />
+                    </div>
+                    {settings.useSpotifyForFocus && (
+                      <Input
+                        placeholder="Spotify URI (e.g. spotify:playlist:...)"
+                        value={settings.spotifyFocusUri}
+                        onChange={(e) => onSetSpotifyFocusUri(e.target.value)}
+                        className="text-xs"
+                      />
+                    )}
+
+                    <div className="flex items-center justify-between gap-2">
+                      <Label className="text-xs">Use Spotify for Break</Label>
+                      <Switch
+                        checked={settings.useSpotifyForBreak}
+                        onCheckedChange={onToggleUseSpotifyForBreak}
+                      />
+                    </div>
+                    {settings.useSpotifyForBreak && (
+                      <Input
+                        placeholder="Spotify URI (e.g. spotify:playlist:...)"
+                        value={settings.spotifyBreakUri}
+                        onChange={(e) => onSetSpotifyBreakUri(e.target.value)}
+                        className="text-xs"
+                      />
+                    )}
+
+                    <p className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                      <ExternalLink className="h-3 w-3" />
+                      In Spotify, right-click a playlist → Share → Copy Spotify URI
+                    </p>
+                  </div>
+                )}
+              </div>
+
               <FileUploadRow
                 label="Focus Music"
                 description="Plays during focus sessions"
@@ -179,7 +273,6 @@ export function AudioSettingsModal({
                 onFileSelect={(file) => onSetFocusMusic(file)}
               />
 
-              {/* Break Chime */}
               <FileUploadRow
                 label="Break Chime"
                 description="Plays when break starts"
@@ -190,7 +283,6 @@ export function AudioSettingsModal({
                 onFileSelect={(file) => onSetBreakChime(file)}
               />
 
-              {/* Break Music */}
               <FileUploadRow
                 label="Break Music"
                 description="Plays during break time"
@@ -202,7 +294,6 @@ export function AudioSettingsModal({
               />
             </div>
 
-            {/* Footer */}
             <div className="mt-6 flex justify-end">
               <Button onClick={onClose}>Done</Button>
             </div>
