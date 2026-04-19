@@ -246,9 +246,9 @@ export function AudioSettingsModal({
                     </div>
                     {settings.useSpotifyForFocus && (
                       <Input
-                        placeholder="Spotify URI (e.g. spotify:playlist:...)"
+                        placeholder="Paste Spotify link or URI"
                         value={settings.spotifyFocusUri}
-                        onChange={(e) => onSetSpotifyFocusUri(e.target.value)}
+                        onChange={(e) => onSetSpotifyFocusUri(normalizeSpotifyUri(e.target.value))}
                         className="text-xs"
                       />
                     )}
@@ -262,9 +262,9 @@ export function AudioSettingsModal({
                     </div>
                     {settings.useSpotifyForBreak && (
                       <Input
-                        placeholder="Spotify URI (e.g. spotify:playlist:...)"
+                        placeholder="Paste Spotify link or URI"
                         value={settings.spotifyBreakUri}
-                        onChange={(e) => onSetSpotifyBreakUri(e.target.value)}
+                        onChange={(e) => onSetSpotifyBreakUri(normalizeSpotifyUri(e.target.value))}
                         className="text-xs"
                       />
                     )}
