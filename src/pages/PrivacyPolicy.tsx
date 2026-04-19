@@ -24,7 +24,7 @@ const PrivacyPolicy = () => {
           <section>
             <h2 className="text-xl font-medium mb-3">Overview</h2>
             <p className="text-muted-foreground">
-              Rhythm Flow ("we," "our," or "the app") is a Pomodoro timer
+              Rhythm Focus ("we," "our," or "the app") is a Pomodoro timer
               designed with privacy at its core. We believe your focus time is
               yours alone — we collect as little data as possible.
             </p>
@@ -34,7 +34,7 @@ const PrivacyPolicy = () => {
             <h2 className="text-xl font-medium mb-3">What we collect</h2>
             <p className="text-muted-foreground mb-3">
               <strong className="text-foreground">Nothing personal by default.</strong>{" "}
-              Rhythm Flow does not require an account, does not track you across
+              Rhythm Focus does not require an account, does not track you across
               apps, and does not collect analytics about your usage.
             </p>
             <p className="text-muted-foreground">
@@ -46,7 +46,7 @@ const PrivacyPolicy = () => {
           <section>
             <h2 className="text-xl font-medium mb-3">Spotify integration (optional)</h2>
             <p className="text-muted-foreground mb-3">
-              Rhythm Flow uses the official Spotify Web API and Web Playback SDK
+              Rhythm Focus uses the official Spotify Web API and Web Playback SDK
               under Spotify's{" "}
               <a
                 href="https://developer.spotify.com/terms"
@@ -123,7 +123,7 @@ const PrivacyPolicy = () => {
           <section>
             <h2 className="text-xl font-medium mb-3">Children's privacy</h2>
             <p className="text-muted-foreground">
-              Rhythm Flow is suitable for all ages and does not knowingly collect
+              Rhythm Focus is suitable for all ages and does not knowingly collect
               data from children under 13.
             </p>
           </section>
