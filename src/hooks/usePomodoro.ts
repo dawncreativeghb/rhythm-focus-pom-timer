@@ -64,26 +64,30 @@ export function usePomodoro(settings: PomodoroSettings = DEFAULT_SETTINGS) {
     );
   }, [mode, settings]);
 
-  const switchMode = useCallback((newMode: TimerMode, nextSessionCount?: number) => {
+  const switchMode = useCallback((newMode: TimerMode, nextSessionCount?: number, opts?: { keepRunning?: boolean }) => {
     setMode(newMode);
-    setIsRunning(false);
+    if (!opts?.keepRunning) {
+      setIsRunning(false);
+    }
     const sessCount = nextSessionCount ?? sessionsCompleted;
     const willBeLongBreak = newMode === 'break' && sessCount > 0 && sessCount % settings.sessionsBeforeLongBreak === 0;
-    setTimeRemaining(newMode === 'focus' 
-      ? settings.focusDuration * 60 
+    setTimeRemaining(newMode === 'focus'
+      ? settings.focusDuration * 60
       : (willBeLongBreak ? settings.longBreakDuration : settings.shortBreakDuration) * 60
     );
   }, [settings, sessionsCompleted]);
 
   const skipToNext = useCallback(() => {
+    // Preserve running state so the next mode auto-starts if the timer was already running
+    const wasRunning = isRunning;
     if (mode === 'focus') {
       const newCount = sessionsCompleted + 1;
       setSessionsCompleted(newCount);
-      switchMode('break', newCount);
+      switchMode('break', newCount, { keepRunning: wasRunning });
     } else {
-      switchMode('focus');
+      switchMode('focus', undefined, { keepRunning: wasRunning });
     }
-  }, [mode, switchMode, sessionsCompleted]);
+  }, [mode, switchMode, sessionsCompleted, isRunning]);
 
   // Timer effect
   useEffect(() => {
