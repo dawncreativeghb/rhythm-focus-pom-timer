@@ -228,41 +228,56 @@ export function useSpotify() {
     setAuth(next);
   }, []);
 
-  const play = useCallback(async (contextUri?: string) => {
-    if (!deviceId) return;
-    const token = await getValidToken();
-    if (!token) return;
-    try {
-      const body: any = {};
-      if (contextUri) {
-        if (contextUri.includes(':track:')) {
-          body.uris = [contextUri];
-        } else {
-          body.context_uri = contextUri;
-        }
+  const play = useCallback(
+    async (contextUri?: string, options?: { positionMs?: number; offsetUri?: string }) => {
+      if (!deviceId) {
+        console.warn('[Spotify] play() called but no deviceId yet');
+        return;
       }
-      const res = await fetch(
-        `https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`,
-        {
-          method: 'PUT',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(body),
+      const token = await getValidToken();
+      if (!token) return;
+      try {
+        const body: any = {};
+        if (contextUri) {
+          if (contextUri.includes(':track:')) {
+            body.uris = [contextUri];
+          } else {
+            body.context_uri = contextUri;
+            if (options?.offsetUri) {
+              body.offset = { uri: options.offsetUri };
+            }
+          }
+          if (options?.positionMs && options.positionMs > 0) {
+            body.position_ms = options.positionMs;
+          }
         }
-      );
-      if (!res.ok && res.status !== 204) {
-        const text = await res.text();
-        console.error('Spotify play failed', res.status, text);
-        if (res.status === 403) {
-          setError('Spotify Premium required for playback');
+        console.log('[Spotify] play', { contextUri, body, deviceId });
+        const res = await fetch(
+          `https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`,
+          {
+            method: 'PUT',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(body),
+          }
+        );
+        if (!res.ok && res.status !== 204) {
+          const text = await res.text();
+          console.error('[Spotify] play failed', res.status, text);
+          if (res.status === 403) {
+            setError('Spotify Premium required for playback');
+          } else if (res.status === 404) {
+            setError('Playlist not found — check the link is correct and public');
+          }
         }
+      } catch (e) {
+        console.error('[Spotify] play error', e);
       }
-    } catch (e) {
-      console.error('Play error', e);
-    }
-  }, [deviceId, getValidToken]);
+    },
+    [deviceId, getValidToken]
+  );
 
   const pause = useCallback(async () => {
     if (!deviceId) return;
@@ -277,6 +292,23 @@ export function useSpotify() {
       console.error('Pause error', e);
     }
   }, [deviceId, getValidToken]);
+
+  // Get current playback state — useful for capturing track + position before pausing
+  const getCurrentState = useCallback(async () => {
+    if (!playerRef.current) return null;
+    try {
+      const state = await playerRef.current.getCurrentState();
+      if (!state) return null;
+      return {
+        trackUri: state.track_window?.current_track?.uri as string | undefined,
+        positionMs: state.position as number,
+        contextUri: state.context?.uri as string | undefined,
+      };
+    } catch (e) {
+      console.error('getCurrentState error', e);
+      return null;
+    }
+  }, []);
 
   const setVolume = useCallback(async (volume: number) => {
     if (!playerRef.current) return;
@@ -301,5 +333,6 @@ export function useSpotify() {
     play,
     pause,
     setVolume,
+    getCurrentState,
   };
 }

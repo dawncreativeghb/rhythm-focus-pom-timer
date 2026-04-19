@@ -43,8 +43,13 @@ const Index = () => {
     }
   }, [audioSettings.settings.volume, spotify.isConnected, spotify.setVolume]);
 
-  // Spotify playback control
+  // Spotify playback control with per-playlist position memory
   const lastPlayedRef = useRef<string | null>(null);
+  // Map of contextUri → { trackUri, positionMs } so we can resume where we left off
+  const positionMemoryRef = useRef<Map<string, { trackUri?: string; positionMs: number }>>(
+    new Map()
+  );
+
   useEffect(() => {
     if (!spotify.isConnected || !spotify.playerReady) return;
 
@@ -54,20 +59,56 @@ const Index = () => {
         ? audioSettings.settings.spotifyFocusUri
         : audioSettings.settings.spotifyBreakUri;
 
+    const key = `${pomodoro.mode}:${uri}`;
+
     if (shouldPlay) {
-      const key = `${pomodoro.mode}:${uri}`;
       if (lastPlayedRef.current !== key) {
-        // Mode or URI changed — pause current context, then play the new one.
+        const previousKey = lastPlayedRef.current;
         lastPlayedRef.current = key;
         (async () => {
+          // Capture current position of the OUTGOING playlist before pausing
+          if (previousKey) {
+            const state = await spotify.getCurrentState();
+            const previousUri = previousKey.split(':').slice(1).join(':');
+            if (state && previousUri && state.contextUri === previousUri) {
+              positionMemoryRef.current.set(previousUri, {
+                trackUri: state.trackUri,
+                positionMs: state.positionMs,
+              });
+              console.log('[Spotify] saved position for', previousUri, state);
+            }
+          }
           await spotify.pause();
-          await new Promise((r) => setTimeout(r, 150));
-          await spotify.play(uri || undefined);
+          await new Promise((r) => setTimeout(r, 200));
+          if (!uri) {
+            console.warn('[Spotify] no URI configured for', pomodoro.mode);
+            return;
+          }
+          // Resume from saved position if we have one for this playlist
+          const saved = positionMemoryRef.current.get(uri);
+          await spotify.play(uri, saved
+            ? { positionMs: saved.positionMs, offsetUri: saved.trackUri }
+            : undefined);
         })();
       }
-      // If key matches, playback is already running — leave it alone.
     } else {
-      spotify.pause();
+      // Pausing — capture current position so next resume picks up here
+      if (lastPlayedRef.current) {
+        const stoppedKey = lastPlayedRef.current;
+        const stoppedUri = stoppedKey.split(':').slice(1).join(':');
+        (async () => {
+          const state = await spotify.getCurrentState();
+          if (state && stoppedUri && state.contextUri === stoppedUri) {
+            positionMemoryRef.current.set(stoppedUri, {
+              trackUri: state.trackUri,
+              positionMs: state.positionMs,
+            });
+          }
+          await spotify.pause();
+        })();
+      } else {
+        spotify.pause();
+      }
       lastPlayedRef.current = null;
     }
   }, [
