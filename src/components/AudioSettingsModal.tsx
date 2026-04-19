@@ -271,7 +271,7 @@ export function AudioSettingsModal({
 
                     <p className="flex items-center gap-1 text-[10px] text-muted-foreground">
                       <ExternalLink className="h-3 w-3" />
-                      In Spotify, right-click a playlist → Share → Copy Spotify URI
+                      Paste any Spotify share link — we'll convert it automatically
                     </p>
                   </div>
                 )}
