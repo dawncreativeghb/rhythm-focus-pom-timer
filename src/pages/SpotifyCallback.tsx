@@ -15,15 +15,17 @@ const SpotifyCallback = () => {
     const code = params.get('code');
     const state = params.get('state');
     const err = params.get('error');
+    const errDesc = params.get('error_description');
 
     if (err) {
       setStatus('error');
-      setErrorMsg(err);
+      setErrorMsg(`${err}${errDesc ? ` — ${errDesc}` : ''}`);
+      console.error('Spotify OAuth error:', err, errDesc, 'Full URL:', window.location.href);
       return;
     }
     if (!code || !state) {
       setStatus('error');
-      setErrorMsg('Missing authorization code');
+      setErrorMsg(`Missing authorization code. URL: ${window.location.search}`);
       return;
     }
 
