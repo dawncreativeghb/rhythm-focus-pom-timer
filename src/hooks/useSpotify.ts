@@ -333,5 +333,6 @@ export function useSpotify() {
     play,
     pause,
     setVolume,
+    getCurrentState,
   };
 }
