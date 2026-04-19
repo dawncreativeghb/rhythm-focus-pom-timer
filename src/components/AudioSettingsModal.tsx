@@ -8,6 +8,20 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import type { AudioSettings } from '@/hooks/useAudioSettings';
 
+// Convert a Spotify share URL (https://open.spotify.com/playlist/ID?si=...)
+// or a raw ID into a Spotify URI (spotify:playlist:ID). Returns input unchanged
+// if it's already a URI or unrecognized.
+function normalizeSpotifyUri(input: string): string {
+  const trimmed = input.trim();
+  if (!trimmed) return '';
+  if (trimmed.startsWith('spotify:')) return trimmed;
+  const match = trimmed.match(
+    /open\.spotify\.com\/(?:intl-[a-z]{2}\/)?(playlist|album|track|artist|episode|show)\/([a-zA-Z0-9]+)/
+  );
+  if (match) return `spotify:${match[1]}:${match[2]}`;
+  return trimmed;
+}
+
 interface SpotifyState {
   isConnected: boolean;
   isPremium: boolean;
@@ -232,9 +246,9 @@ export function AudioSettingsModal({
                     </div>
                     {settings.useSpotifyForFocus && (
                       <Input
-                        placeholder="Spotify URI (e.g. spotify:playlist:...)"
+                        placeholder="Paste Spotify link or URI"
                         value={settings.spotifyFocusUri}
-                        onChange={(e) => onSetSpotifyFocusUri(e.target.value)}
+                        onChange={(e) => onSetSpotifyFocusUri(normalizeSpotifyUri(e.target.value))}
                         className="text-xs"
                       />
                     )}
@@ -248,16 +262,16 @@ export function AudioSettingsModal({
                     </div>
                     {settings.useSpotifyForBreak && (
                       <Input
-                        placeholder="Spotify URI (e.g. spotify:playlist:...)"
+                        placeholder="Paste Spotify link or URI"
                         value={settings.spotifyBreakUri}
-                        onChange={(e) => onSetSpotifyBreakUri(e.target.value)}
+                        onChange={(e) => onSetSpotifyBreakUri(normalizeSpotifyUri(e.target.value))}
                         className="text-xs"
                       />
                     )}
 
                     <p className="flex items-center gap-1 text-[10px] text-muted-foreground">
                       <ExternalLink className="h-3 w-3" />
-                      In Spotify, right-click a playlist → Share → Copy Spotify URI
+                      Paste any Spotify share link — we'll convert it automatically
                     </p>
                   </div>
                 )}
