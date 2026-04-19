@@ -57,11 +57,15 @@ const Index = () => {
     if (shouldPlay) {
       const key = `${pomodoro.mode}:${uri}`;
       if (lastPlayedRef.current !== key) {
-        spotify.play(uri || undefined);
+        // Mode or URI changed — pause current context, then play the new one.
         lastPlayedRef.current = key;
-      } else {
-        spotify.play();
+        (async () => {
+          await spotify.pause();
+          await new Promise((r) => setTimeout(r, 150));
+          await spotify.play(uri || undefined);
+        })();
       }
+      // If key matches, playback is already running — leave it alone.
     } else {
       spotify.pause();
       lastPlayedRef.current = null;
