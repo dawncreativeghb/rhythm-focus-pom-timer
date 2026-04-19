@@ -8,6 +8,10 @@ export interface AudioSettings {
   breakChimeEnabled: boolean;
   breakMusicEnabled: boolean;
   volume: number; // 0 to 1
+  spotifyFocusUri: string;
+  spotifyBreakUri: string;
+  useSpotifyForFocus: boolean;
+  useSpotifyForBreak: boolean;
 }
 
 export interface AudioFile {
@@ -26,6 +30,10 @@ const DEFAULT_SETTINGS: AudioSettings = {
   breakChimeEnabled: true,
   breakMusicEnabled: true,
   volume: 0.7,
+  spotifyFocusUri: '',
+  spotifyBreakUri: '',
+  useSpotifyForFocus: false,
+  useSpotifyForBreak: false,
 };
 
 // Helper to convert File to base64 for localStorage persistence
@@ -120,7 +128,23 @@ export function useAudioSettings() {
   }, []);
 
   const clearAll = useCallback(() => {
-    setSettings(DEFAULT_SETTINGS);
+    setSettings({ ...DEFAULT_SETTINGS });
+  }, []);
+
+  const setSpotifyFocusUri = useCallback((uri: string) => {
+    setSettings(prev => ({ ...prev, spotifyFocusUri: uri }));
+  }, []);
+
+  const setSpotifyBreakUri = useCallback((uri: string) => {
+    setSettings(prev => ({ ...prev, spotifyBreakUri: uri }));
+  }, []);
+
+  const toggleUseSpotifyForFocus = useCallback(() => {
+    setSettings(prev => ({ ...prev, useSpotifyForFocus: !prev.useSpotifyForFocus }));
+  }, []);
+
+  const toggleUseSpotifyForBreak = useCallback(() => {
+    setSettings(prev => ({ ...prev, useSpotifyForBreak: !prev.useSpotifyForBreak }));
   }, []);
 
   return {
@@ -134,5 +158,9 @@ export function useAudioSettings() {
     toggleBreakMusic,
     setVolume,
     clearAll,
+    setSpotifyFocusUri,
+    setSpotifyBreakUri,
+    toggleUseSpotifyForFocus,
+    toggleUseSpotifyForBreak,
   };
 }

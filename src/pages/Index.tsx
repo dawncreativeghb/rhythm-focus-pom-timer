@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { usePomodoro } from '@/hooks/usePomodoro';
 import { useAudioSettings } from '@/hooks/useAudioSettings';
 import { useAudioPlayer } from '@/hooks/useAudioPlayer';
+import { useSpotify } from '@/hooks/useSpotify';
 import { TimerRing } from '@/components/TimerRing';
 import { ModeIndicator } from '@/components/ModeIndicator';
 import { ControlButton } from '@/components/ControlButton';
@@ -19,44 +20,80 @@ const Index = () => {
   });
 
   const audioSettings = useAudioSettings();
+  const spotify = useSpotify();
   const [musicEnabled, setMusicEnabled] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const previousModeRef = useRef(pomodoro.mode);
 
-  // Use audio player hook
+  const useSpotifyNow =
+    pomodoro.mode === 'focus'
+      ? audioSettings.settings.useSpotifyForFocus
+      : audioSettings.settings.useSpotifyForBreak;
+
+  // Local audio playback (only when not using Spotify for current mode)
   useAudioPlayer({
     settings: audioSettings.settings,
     mode: pomodoro.mode,
-    isRunning: pomodoro.isRunning && musicEnabled,
+    isRunning: pomodoro.isRunning && musicEnabled && !useSpotifyNow,
   });
 
-  // Detect mode transitions for chime
+  // Spotify volume sync
   useEffect(() => {
-    if (previousModeRef.current === 'focus' && pomodoro.mode === 'break') {
-      // Mode just changed to break - chime is handled by useAudioPlayer
+    if (spotify.isConnected) {
+      spotify.setVolume(audioSettings.settings.volume);
     }
-    previousModeRef.current = pomodoro.mode;
-  }, [pomodoro.mode]);
+  }, [audioSettings.settings.volume, spotify.isConnected, spotify.setVolume]);
 
-  const handleMusicToggle = () => {
-    setMusicEnabled(prev => !prev);
-  };
+  // Spotify playback control
+  const lastPlayedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!spotify.isConnected || !spotify.playerReady) return;
+
+    const shouldPlay = pomodoro.isRunning && musicEnabled && useSpotifyNow;
+    const uri =
+      pomodoro.mode === 'focus'
+        ? audioSettings.settings.spotifyFocusUri
+        : audioSettings.settings.spotifyBreakUri;
+
+    if (shouldPlay) {
+      const key = `${pomodoro.mode}:${uri}`;
+      if (lastPlayedRef.current !== key) {
+        spotify.play(uri || undefined);
+        lastPlayedRef.current = key;
+      } else {
+        spotify.play();
+      }
+    } else {
+      spotify.pause();
+      lastPlayedRef.current = null;
+    }
+  }, [
+    pomodoro.isRunning,
+    pomodoro.mode,
+    musicEnabled,
+    useSpotifyNow,
+    spotify.isConnected,
+    spotify.playerReady,
+    audioSettings.settings.spotifyFocusUri,
+    audioSettings.settings.spotifyBreakUri,
+  ]);
+
+  const handleMusicToggle = () => setMusicEnabled((prev) => !prev);
 
   const hasAudioConfigured = !!(
-    audioSettings.settings.focusMusic || 
-    audioSettings.settings.breakMusic || 
-    audioSettings.settings.breakChime
+    audioSettings.settings.focusMusic ||
+    audioSettings.settings.breakMusic ||
+    audioSettings.settings.breakChime ||
+    spotify.isConnected
   );
 
   return (
-    <main 
+    <main
       className={`flex min-h-screen flex-col items-center justify-between px-6 py-12 transition-colors duration-500 ${
         pomodoro.mode === 'focus' ? 'gradient-focus' : 'gradient-break'
       }`}
       role="main"
       aria-label="Pomodoro Timer"
     >
-      {/* Header with mode switcher */}
       <motion.header
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -67,7 +104,6 @@ const Index = () => {
         <ModeSwitcher mode={pomodoro.mode} onSwitch={pomodoro.switchMode} />
       </motion.header>
 
-      {/* Main timer section */}
       <motion.section
         id="timer-panel"
         role="tabpanel"
@@ -77,18 +113,15 @@ const Index = () => {
         className="flex flex-col items-center gap-8"
         aria-label={`${pomodoro.mode === 'focus' ? 'Focus' : 'Break'} timer`}
       >
-        <ModeIndicator 
-          mode={pomodoro.mode} 
-          sessionsCompleted={pomodoro.sessionsCompleted} 
-        />
-        
+        <ModeIndicator mode={pomodoro.mode} sessionsCompleted={pomodoro.sessionsCompleted} />
+
         <TimerRing
           progress={pomodoro.progress}
           mode={pomodoro.mode}
           isRunning={pomodoro.isRunning}
           formattedTime={pomodoro.formattedTime}
         />
-        
+
         <ControlButton
           isRunning={pomodoro.isRunning}
           mode={pomodoro.mode}
@@ -98,7 +131,6 @@ const Index = () => {
         />
       </motion.section>
 
-      {/* Footer with Music toggle */}
       <motion.footer
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -113,13 +145,12 @@ const Index = () => {
           onOpenSettings={() => setSettingsOpen(true)}
         />
         <p className="text-xs text-muted-foreground">
-          {hasAudioConfigured 
-            ? 'Tap to control music • Settings for audio files' 
-            : 'Tap settings to add your music files'}
+          {hasAudioConfigured
+            ? 'Tap to control music • Settings for audio'
+            : 'Tap settings to add music or connect Spotify'}
         </p>
       </motion.footer>
 
-      {/* Audio Settings Modal */}
       <AudioSettingsModal
         isOpen={settingsOpen}
         onClose={() => setSettingsOpen(false)}
@@ -131,6 +162,20 @@ const Index = () => {
         onToggleBreakChime={audioSettings.toggleBreakChime}
         onToggleBreakMusic={audioSettings.toggleBreakMusic}
         onSetVolume={audioSettings.setVolume}
+        onSetSpotifyFocusUri={audioSettings.setSpotifyFocusUri}
+        onSetSpotifyBreakUri={audioSettings.setSpotifyBreakUri}
+        onToggleUseSpotifyForFocus={audioSettings.toggleUseSpotifyForFocus}
+        onToggleUseSpotifyForBreak={audioSettings.toggleUseSpotifyForBreak}
+        spotify={{
+          isConnected: spotify.isConnected,
+          isPremium: spotify.isPremium,
+          profile: spotify.profile,
+          playerReady: spotify.playerReady,
+          isLoading: spotify.isLoading,
+          error: spotify.error,
+          connect: spotify.connect,
+          disconnect: spotify.disconnect,
+        }}
       />
     </main>
   );
