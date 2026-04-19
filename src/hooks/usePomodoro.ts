@@ -80,6 +80,7 @@ export function usePomodoro(settings: PomodoroSettings = DEFAULT_SETTINGS) {
   const skipToNext = useCallback(() => {
     // Preserve running state so the next mode auto-starts if the timer was already running
     const wasRunning = isRunning;
+    console.log('[Pomodoro] skipToNext', { mode, wasRunning, sessionsCompleted });
     if (mode === 'focus') {
       const newCount = sessionsCompleted + 1;
       setSessionsCompleted(newCount);
