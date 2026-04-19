@@ -24,8 +24,8 @@ const PrivacyPolicy = () => {
           <section>
             <h2 className="text-xl font-medium mb-3">Overview</h2>
             <p className="text-muted-foreground">
-              Rhythm Focus ("we," "our," or "the app") is a Pomodoro timer with focus
-              music designed with privacy at its core. We believe your focus time is
+              Rhythm Focus ("we," "our," or "the app") is a Pomodoro timer
+              designed with privacy at its core. We believe your focus time is
               yours alone — we collect as little data as possible.
             </p>
           </section>
