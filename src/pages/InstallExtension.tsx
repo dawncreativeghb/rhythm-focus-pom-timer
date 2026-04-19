@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 
 export default function InstallExtension() {
   const download = () => {
-    fetch('/focus-flow-extension.zip')
+    fetch('/rhythm-flow-extension.zip')
       .then((res) => {
         if (!res.ok) throw new Error(`Download failed: ${res.status}`);
         return res.blob();
@@ -12,7 +12,7 @@ export default function InstallExtension() {
       .then((blob) => {
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = 'focus-flow-extension.zip';
+        a.download = 'rhythm-flow-extension.zip';
         a.click();
         URL.revokeObjectURL(a.href);
       })
@@ -34,7 +34,7 @@ export default function InstallExtension() {
         </div>
         <h1 className="text-3xl font-semibold tracking-tight">Chrome Extension</h1>
         <p className="text-muted-foreground">
-          Run Focus Flow as a popup in any Chromium browser — Chrome, Edge, Brave, Arc, Opera. The
+          Run Rhythm Flow as a popup in any Chromium browser — Chrome, Edge, Brave, Arc, Opera. The
           timer keeps running in the background even when the popup is closed.
         </p>
       </header>
