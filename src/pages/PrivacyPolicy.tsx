@@ -85,10 +85,10 @@ const PrivacyPolicy = () => {
             <p className="text-muted-foreground">
               Questions about this policy? Email{" "}
               <a
-                href="mailto:hello@dawncreative.co"
+                href="mailto:hello@dawncreative.com"
                 className="text-foreground underline underline-offset-4 hover:text-primary transition-colors"
               >
-                hello@dawncreative.co
+                hello@dawncreative.com
               </a>
               .
             </p>
