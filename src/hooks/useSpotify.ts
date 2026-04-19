@@ -266,10 +266,24 @@ export function useSpotify() {
         if (!res.ok && res.status !== 204) {
           const text = await res.text();
           console.error('[Spotify] play failed', res.status, text);
+          let parsed: any = null;
+          try { parsed = JSON.parse(text); } catch {}
+          const reason = parsed?.error?.reason as string | undefined;
+          const message = parsed?.error?.message as string | undefined;
+
           if (res.status === 403) {
             setError('Spotify Premium required for playback');
           } else if (res.status === 404) {
-            setError('Playlist not found — check the link is correct and public');
+            // Spotify returns 404 for both missing devices AND missing playlists
+            if (reason === 'NO_ACTIVE_DEVICE' || message?.toLowerCase().includes('device')) {
+              setError('Spotify player not ready — try disconnecting and reconnecting Spotify');
+            } else {
+              setError('Playlist not found — make sure the link is correct and set to public');
+            }
+          } else if (res.status === 401) {
+            setError('Spotify session expired — please reconnect');
+          } else {
+            setError(`Spotify error (${res.status}): ${message || 'unknown'}`);
           }
         }
       } catch (e) {
