@@ -7,12 +7,12 @@ const STATE_KEY = 'spotify-oauth-state';
 interface StoredAuth {
   access_token: string;
   refresh_token: string;
-  expires_at: number; // ms timestamp
+  expires_at: number;
 }
 
 interface SpotifyProfile {
   display_name: string;
-  product: string; // 'premium' | 'free' | 'open'
+  product: string;
 }
 
 declare global {
@@ -60,7 +60,6 @@ export function useSpotify() {
   const getValidToken = useCallback(async (): Promise<string | null> => {
     const current = loadAuth();
     if (!current) return null;
-    // Refresh if expiring within 60s
     if (current.expires_at - Date.now() > 60_000) {
       return current.access_token;
     }
@@ -77,7 +76,7 @@ export function useSpotify() {
       const next: StoredAuth = {
         access_token: data.access_token,
         refresh_token: data.refresh_token || current.refresh_token,
-        expires_at: Date.now() + (data.expires_in * 1000),
+        expires_at: Date.now() + data.expires_in * 1000,
       };
       saveAuth(next);
       setAuth(next);
@@ -88,7 +87,48 @@ export function useSpotify() {
     }
   }, []);
 
-  // Fetch profile when authed
+  const ensureActiveDevice = useCallback(
+    async (targetDeviceId?: string) => {
+      const resolvedDeviceId = targetDeviceId ?? deviceId;
+      if (!resolvedDeviceId) return false;
+
+      try {
+        await playerRef.current?.activateElement?.();
+      } catch (e) {
+        console.warn('[Spotify] activateElement failed', e);
+      }
+
+      const token = await getValidToken();
+      if (!token) return false;
+
+      try {
+        const res = await fetch('https://api.spotify.com/v1/me/player', {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            device_ids: [resolvedDeviceId],
+            play: false,
+          }),
+        });
+
+        if (!res.ok && res.status !== 204) {
+          const text = await res.text();
+          console.error('[Spotify] transfer playback failed', res.status, text);
+          return false;
+        }
+
+        return true;
+      } catch (e) {
+        console.error('[Spotify] transfer playback error', e);
+        return false;
+      }
+    },
+    [deviceId, getValidToken]
+  );
+
   useEffect(() => {
     if (!auth) {
       setProfile(null);
@@ -111,14 +151,13 @@ export function useSpotify() {
     })();
   }, [auth, getValidToken]);
 
-  // Load Spotify Web Playback SDK once user is connected
   useEffect(() => {
     if (!auth || sdkLoadedRef.current) return;
     sdkLoadedRef.current = true;
 
     const initPlayer = () => {
       const player = new window.Spotify.Player({
-        name: 'Focus Flow Pomodoro',
+        name: 'Rhythm Focus Web Player',
         getOAuthToken: async (cb: (token: string) => void) => {
           const token = await getValidToken();
           if (token) cb(token);
@@ -126,34 +165,48 @@ export function useSpotify() {
         volume: 0.5,
       });
 
+      playerRef.current = player;
+
       player.addListener('ready', ({ device_id }: { device_id: string }) => {
         console.log('Spotify player ready', device_id);
         setDeviceId(device_id);
         setPlayerReady(true);
+        setError(null);
+
+        void (async () => {
+          await ensureActiveDevice(device_id);
+        })();
       });
 
       player.addListener('not_ready', ({ device_id }: { device_id: string }) => {
         console.log('Spotify player offline', device_id);
         setPlayerReady(false);
+        setDeviceId((current) => (current === device_id ? null : current));
       });
 
       player.addListener('initialization_error', ({ message }: any) => {
         console.error('Spotify init error', message);
         setError(message);
       });
+
       player.addListener('authentication_error', ({ message }: any) => {
         console.error('Spotify auth error', message);
-        setError('Authentication failed - please reconnect');
+        setError('Authentication failed — please reconnect');
         clearAuth();
         setAuth(null);
       });
+
       player.addListener('account_error', ({ message }: any) => {
         console.error('Spotify account error', message);
         setError('Spotify Premium required for playback');
       });
 
+      player.addListener('playback_error', ({ message }: any) => {
+        console.error('Spotify playback error', message);
+        setError(message || 'Spotify playback failed');
+      });
+
       player.connect();
-      playerRef.current = player;
     };
 
     if (window.Spotify) {
@@ -170,7 +223,7 @@ export function useSpotify() {
       playerRef.current?.disconnect();
       playerRef.current = null;
     };
-  }, [auth, getValidToken]);
+  }, [auth, ensureActiveDevice, getValidToken]);
 
   const connect = useCallback(async () => {
     setIsLoading(true);
@@ -183,7 +236,6 @@ export function useSpotify() {
         throw new Error(error?.message || 'Failed to start login');
       }
       sessionStorage.setItem(STATE_KEY, data.state);
-      // Break out of preview iframe — Spotify blocks framing with X-Frame-Options: DENY
       const top = window.top ?? window;
       try {
         top.location.href = data.url;
@@ -205,6 +257,7 @@ export function useSpotify() {
     setProfile(null);
     setDeviceId(null);
     setPlayerReady(false);
+    setError(null);
   }, []);
 
   const handleCallback = useCallback(async (code: string, state: string) => {
@@ -222,21 +275,28 @@ export function useSpotify() {
     const next: StoredAuth = {
       access_token: data.access_token,
       refresh_token: data.refresh_token,
-      expires_at: Date.now() + (data.expires_in * 1000),
+      expires_at: Date.now() + data.expires_in * 1000,
     };
     saveAuth(next);
     setAuth(next);
+    setIsLoading(false);
   }, []);
 
   const play = useCallback(
     async (contextUri?: string, options?: { positionMs?: number; offsetUri?: string }) => {
       if (!deviceId) {
         console.warn('[Spotify] play() called but no deviceId yet');
+        setError('Spotify player is still connecting — try again in a second');
         return;
       }
+
       const token = await getValidToken();
       if (!token) return;
-      try {
+
+      const activateAndPlay = async () => {
+        await ensureActiveDevice(deviceId);
+        await new Promise((resolve) => setTimeout(resolve, 300));
+
         const body: any = {};
         if (contextUri) {
           if (contextUri.includes(':track:')) {
@@ -251,63 +311,88 @@ export function useSpotify() {
             body.position_ms = options.positionMs;
           }
         }
+
         console.log('[Spotify] play', { contextUri, body, deviceId });
-        const res = await fetch(
-          `https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`,
-          {
-            method: 'PUT',
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(body),
-          }
-        );
+        return fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(body),
+        });
+      };
+
+      try {
+        let res = await activateAndPlay();
+
         if (!res.ok && res.status !== 204) {
           const text = await res.text();
           console.error('[Spotify] play failed', res.status, text);
           let parsed: any = null;
-          try { parsed = JSON.parse(text); } catch {}
-          const reason = parsed?.error?.reason as string | undefined;
+          try {
+            parsed = JSON.parse(text);
+          } catch {}
           const message = parsed?.error?.message as string | undefined;
 
-          if (res.status === 403) {
-            setError('Spotify Premium required for playback');
-          } else if (res.status === 404) {
-            // Spotify returns 404 for both missing devices AND missing playlists
-            if (reason === 'NO_ACTIVE_DEVICE' || message?.toLowerCase().includes('device')) {
-              setError('Spotify player not ready — try disconnecting and reconnecting Spotify');
-            } else {
-              setError('Playlist not found — make sure the link is correct and set to public');
-            }
-          } else if (res.status === 401) {
-            setError('Spotify session expired — please reconnect');
-          } else {
-            setError(`Spotify error (${res.status}): ${message || 'unknown'}`);
+          if (res.status === 404 && message?.toLowerCase().includes('device')) {
+            await ensureActiveDevice(deviceId);
+            await new Promise((resolve) => setTimeout(resolve, 500));
+            res = await activateAndPlay();
           }
+
+          if (!res.ok && res.status !== 204) {
+            const retryText = await res.text();
+            console.error('[Spotify] play retry failed', res.status, retryText);
+            let retryParsed: any = null;
+            try {
+              retryParsed = JSON.parse(retryText);
+            } catch {}
+            const retryMessage = retryParsed?.error?.message as string | undefined;
+
+            if (res.status === 403) {
+              setError('Spotify Premium required for playback');
+            } else if (res.status === 404 && retryMessage?.toLowerCase().includes('device')) {
+              setError('Spotify web player not ready yet — open Spotify, then reconnect and try again');
+            } else if (res.status === 404) {
+              setError('Playlist not found — make sure the link is correct and set to public');
+            } else if (res.status === 401) {
+              setError('Spotify session expired — please reconnect');
+            } else {
+              setError(`Spotify error (${res.status}): ${retryMessage || 'unknown'}`);
+            }
+          } else {
+            setError(null);
+          }
+        } else {
+          setError(null);
         }
       } catch (e) {
         console.error('[Spotify] play error', e);
       }
     },
-    [deviceId, getValidToken]
+    [deviceId, ensureActiveDevice, getValidToken]
   );
 
   const pause = useCallback(async () => {
-    if (!deviceId) return;
     const token = await getValidToken();
     if (!token) return;
+
     try {
-      await fetch(`https://api.spotify.com/v1/me/player/pause?device_id=${deviceId}`, {
+      const res = await fetch('https://api.spotify.com/v1/me/player/pause', {
         method: 'PUT',
         headers: { Authorization: `Bearer ${token}` },
       });
+
+      if (!res.ok && res.status !== 204 && res.status !== 404) {
+        const text = await res.text();
+        console.error('[Spotify] pause failed', res.status, text);
+      }
     } catch (e) {
       console.error('Pause error', e);
     }
-  }, [deviceId, getValidToken]);
+  }, [getValidToken]);
 
-  // Get current playback state — useful for capturing track + position before pausing
   const getCurrentState = useCallback(async () => {
     if (!playerRef.current) return null;
     try {
