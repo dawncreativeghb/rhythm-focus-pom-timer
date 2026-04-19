@@ -133,7 +133,7 @@ const Index = () => {
 
   return (
     <main
-      className={`flex min-h-screen flex-col items-center justify-between px-6 py-12 transition-colors duration-500 ${
+      className={`flex min-h-[100dvh] flex-col items-center justify-between px-6 pb-[max(3rem,env(safe-area-inset-bottom))] pt-[max(3rem,env(safe-area-inset-top))] transition-colors duration-500 ${
         pomodoro.mode === 'focus' ? 'gradient-focus' : 'gradient-break'
       }`}
       role="main"
