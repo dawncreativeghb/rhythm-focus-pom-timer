@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'app.lovable.rhythmfocus',
-  appName: 'Rhythm Focus',
+  appName: 'Rhythm Flow',
   webDir: 'dist',
   ios: {
     contentInset: 'always',
