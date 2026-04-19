@@ -198,19 +198,19 @@ export function AudioSettingsModal({
 
               {/* Spotify */}
               <div className="flex flex-col gap-3 rounded-lg border border-primary/30 bg-secondary/50 p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1DB954]/20 text-[#1DB954]">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1DB954]/20 text-[#1DB954]">
                       <Music className="h-5 w-5" />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <p className="font-medium text-foreground">Spotify</p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="truncate text-xs text-muted-foreground">
                         {spotify.isConnected
                           ? spotify.profile
                             ? `${spotify.profile.display_name} • ${spotify.profile.product}`
                             : 'Connected'
-                          : 'Premium required for playback'}
+                          : 'Stream your own playlists during sessions'}
                       </p>
                     </div>
                   </div>
@@ -219,11 +219,28 @@ export function AudioSettingsModal({
                       Disconnect
                     </Button>
                   ) : (
-                    <Button size="sm" onClick={spotify.connect} disabled={spotify.isLoading}>
+                    <Button
+                      size="sm"
+                      onClick={spotify.connect}
+                      disabled={spotify.isLoading}
+                      className="bg-[#1DB954] text-black hover:bg-[#1DB954]/90"
+                    >
                       {spotify.isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Connect'}
                     </Button>
                   )}
                 </div>
+
+                {!spotify.isConnected && (
+                  <div className="rounded-md bg-background/50 p-3 text-xs text-muted-foreground">
+                    <p className="mb-2 font-medium text-foreground">First-time setup</p>
+                    <ol className="list-decimal space-y-1 pl-4">
+                      <li>You'll need a Spotify <strong>Premium</strong> account.</li>
+                      <li>Click <strong>Connect</strong> and approve access.</li>
+                      <li>Paste a Spotify playlist link for focus and/or break.</li>
+                      <li>Press play — your music starts automatically.</li>
+                    </ol>
+                  </div>
+                )}
 
                 {spotify.error && (
                   <p className="text-xs text-destructive">{spotify.error}</p>
@@ -246,7 +263,7 @@ export function AudioSettingsModal({
                     </div>
                     {settings.useSpotifyForFocus && (
                       <Input
-                        placeholder="Paste Spotify link or URI"
+                        placeholder="Paste Spotify playlist link"
                         value={settings.spotifyFocusUri}
                         onChange={(e) => onSetSpotifyFocusUri(normalizeSpotifyUri(e.target.value))}
                         className="text-xs"
@@ -262,7 +279,7 @@ export function AudioSettingsModal({
                     </div>
                     {settings.useSpotifyForBreak && (
                       <Input
-                        placeholder="Paste Spotify link or URI"
+                        placeholder="Paste Spotify playlist link"
                         value={settings.spotifyBreakUri}
                         onChange={(e) => onSetSpotifyBreakUri(normalizeSpotifyUri(e.target.value))}
                         className="text-xs"
@@ -271,7 +288,7 @@ export function AudioSettingsModal({
 
                     <p className="flex items-center gap-1 text-[10px] text-muted-foreground">
                       <ExternalLink className="h-3 w-3" />
-                      Paste any Spotify share link — we'll convert it automatically
+                      Tip: in Spotify, right-click a playlist → Share → Copy link
                     </p>
                   </div>
                 )}
