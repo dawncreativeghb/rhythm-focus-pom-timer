@@ -163,7 +163,7 @@ export function AudioSettingsModal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed left-1/2 top-1/2 z-50 max-h-[90dvh] w-[calc(100vw-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 overflow-y-auto overscroll-contain rounded-2xl bg-card p-5 shadow-xl sm:p-6"
+            className="fixed inset-x-4 top-1/2 z-50 mx-auto max-h-[85dvh] max-w-md -translate-y-1/2 overflow-y-auto overscroll-contain rounded-2xl bg-card p-5 shadow-xl sm:p-6"
           >
             <div className="mb-6 flex items-center justify-between">
               <div className="flex items-center gap-3">
