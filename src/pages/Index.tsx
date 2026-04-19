@@ -21,7 +21,7 @@ const Index = () => {
 
   const audioSettings = useAudioSettings();
   const spotify = useSpotify();
-  const [musicEnabled, setMusicEnabled] = useState(false);
+  const [musicEnabled, setMusicEnabled] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const useSpotifyNow =
