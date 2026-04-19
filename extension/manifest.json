@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Rhythm Flow — Pomodoro",
+  "name": "Rhythm Focus — Pomodoro",
   "version": "1.0.0",
   "description": "Minimalist Pomodoro timer in your browser. 25m focus, 5m breaks, long break after 4 sessions.",
   "permissions": ["storage", "alarms", "notifications"],

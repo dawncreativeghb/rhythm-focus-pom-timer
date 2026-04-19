@@ -157,7 +157,7 @@ export function useSpotify() {
 
     const initPlayer = () => {
       const player = new window.Spotify.Player({
-        name: 'Rhythm Flow Web Player',
+        name: 'Rhythm Focus Web Player',
         getOAuthToken: async (cb: (token: string) => void) => {
           const token = await getValidToken();
           if (token) cb(token);

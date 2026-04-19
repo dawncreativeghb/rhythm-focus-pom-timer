@@ -16,7 +16,7 @@ const Support = () => {
         <header className="mb-10">
           <h1 className="text-4xl font-light tracking-tight mb-3">Support</h1>
           <p className="text-muted-foreground">
-            Need help with Rhythm Flow? We're here.
+            Need help with Rhythm Focus? We're here.
           </p>
         </header>
 
@@ -42,7 +42,7 @@ const Support = () => {
               <div>
                 <h3 className="font-medium mb-2">How does the Pomodoro timer work?</h3>
                 <p className="text-muted-foreground">
-                  Rhythm Flow uses the classic 25/5 Pomodoro sequence: 25 minutes of
+                  Rhythm Focus uses the classic 25/5 Pomodoro sequence: 25 minutes of
                   focused work, followed by a 5-minute break. After every four focus
                   sessions, you'll get a longer 30-minute break to fully reset.
                 </p>
@@ -51,7 +51,7 @@ const Support = () => {
               <div>
                 <h3 className="font-medium mb-2">Do I need a Spotify account?</h3>
                 <p className="text-muted-foreground">
-                  No — Rhythm Flow works perfectly without one. If you do connect
+                  No — Rhythm Focus works perfectly without one. If you do connect
                   Spotify, you can play your own focus playlists during sessions. A
                   Spotify Premium account is required for in-app playback control.
                 </p>
@@ -105,7 +105,7 @@ const Support = () => {
           <section>
             <h2 className="text-xl font-medium mb-3">Feature requests &amp; feedback</h2>
             <p className="text-muted-foreground">
-              We build Rhythm Flow for people who care about deep work. If you have
+              We build Rhythm Focus for people who care about deep work. If you have
               ideas, frustrations, or feedback, please share them. Your input shapes
               what we build next.
             </p>
