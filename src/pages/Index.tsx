@@ -133,7 +133,7 @@ const Index = () => {
 
   return (
     <main
-      className={`flex min-h-[100dvh] flex-col items-center justify-between px-6 pb-[max(3rem,env(safe-area-inset-bottom))] pt-[max(3rem,env(safe-area-inset-top))] transition-colors duration-500 ${
+      className={`flex min-h-[100dvh] w-full max-w-full flex-col items-center justify-between overflow-x-hidden px-4 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(2rem,env(safe-area-inset-top))] transition-colors duration-500 sm:px-6 ${
         pomodoro.mode === 'focus' ? 'gradient-focus' : 'gradient-break'
       }`}
       role="main"
