@@ -46,8 +46,10 @@ interface AudioSettingsModalProps {
   onSetVolume: (volume: number) => void;
   onSetSpotifyFocusUri: (uri: string) => void;
   onSetSpotifyBreakUri: (uri: string) => void;
+  onSetSpotifyLongBreakUri: (uri: string) => void;
   onToggleUseSpotifyForFocus: () => void;
   onToggleUseSpotifyForBreak: () => void;
+  onToggleUseSpotifyForLongBreak: () => void;
   spotify: SpotifyState;
 }
 
@@ -142,8 +144,10 @@ export function AudioSettingsModal({
   onSetVolume,
   onSetSpotifyFocusUri,
   onSetSpotifyBreakUri,
+  onSetSpotifyLongBreakUri,
   onToggleUseSpotifyForFocus,
   onToggleUseSpotifyForBreak,
+  onToggleUseSpotifyForLongBreak,
   spotify,
 }: AudioSettingsModalProps) {
   return (
@@ -271,7 +275,7 @@ export function AudioSettingsModal({
                     )}
 
                     <div className="flex items-center justify-between gap-2">
-                      <Label className="text-xs">Use Spotify for Break</Label>
+                      <Label className="text-xs">Use Spotify for Short Break</Label>
                       <Switch
                         checked={settings.useSpotifyForBreak}
                         onCheckedChange={onToggleUseSpotifyForBreak}
@@ -282,6 +286,22 @@ export function AudioSettingsModal({
                         placeholder="Paste Spotify playlist link"
                         value={settings.spotifyBreakUri}
                         onChange={(e) => onSetSpotifyBreakUri(normalizeSpotifyUri(e.target.value))}
+                        className="text-xs"
+                      />
+                    )}
+
+                    <div className="flex items-center justify-between gap-2">
+                      <Label className="text-xs">Use Spotify for Long Break</Label>
+                      <Switch
+                        checked={settings.useSpotifyForLongBreak}
+                        onCheckedChange={onToggleUseSpotifyForLongBreak}
+                      />
+                    </div>
+                    {settings.useSpotifyForLongBreak && (
+                      <Input
+                        placeholder="Paste Spotify playlist link (30-min break)"
+                        value={settings.spotifyLongBreakUri}
+                        onChange={(e) => onSetSpotifyLongBreakUri(normalizeSpotifyUri(e.target.value))}
                         className="text-xs"
                       />
                     )}

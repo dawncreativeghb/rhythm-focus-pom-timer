@@ -10,8 +10,10 @@ export interface AudioSettings {
   volume: number; // 0 to 1
   spotifyFocusUri: string;
   spotifyBreakUri: string;
+  spotifyLongBreakUri: string;
   useSpotifyForFocus: boolean;
   useSpotifyForBreak: boolean;
+  useSpotifyForLongBreak: boolean;
 }
 
 export interface AudioFile {
@@ -32,8 +34,10 @@ const DEFAULT_SETTINGS: AudioSettings = {
   volume: 0.7,
   spotifyFocusUri: '',
   spotifyBreakUri: '',
+  spotifyLongBreakUri: '',
   useSpotifyForFocus: false,
   useSpotifyForBreak: false,
+  useSpotifyForLongBreak: false,
 };
 
 // Helper to convert File to base64 for localStorage persistence
@@ -147,6 +151,14 @@ export function useAudioSettings() {
     setSettings(prev => ({ ...prev, useSpotifyForBreak: !prev.useSpotifyForBreak }));
   }, []);
 
+  const setSpotifyLongBreakUri = useCallback((uri: string) => {
+    setSettings(prev => ({ ...prev, spotifyLongBreakUri: uri }));
+  }, []);
+
+  const toggleUseSpotifyForLongBreak = useCallback(() => {
+    setSettings(prev => ({ ...prev, useSpotifyForLongBreak: !prev.useSpotifyForLongBreak }));
+  }, []);
+
   return {
     settings,
     isLoaded,
@@ -160,7 +172,9 @@ export function useAudioSettings() {
     clearAll,
     setSpotifyFocusUri,
     setSpotifyBreakUri,
+    setSpotifyLongBreakUri,
     toggleUseSpotifyForFocus,
     toggleUseSpotifyForBreak,
+    toggleUseSpotifyForLongBreak,
   };
 }

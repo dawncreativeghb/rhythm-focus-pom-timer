@@ -24,10 +24,18 @@ const Index = () => {
   const [musicEnabled, setMusicEnabled] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
+  // A break is "long" if we're in break mode after completing a multiple of 4 focus sessions
+  const isLongBreak =
+    pomodoro.mode === 'break' &&
+    pomodoro.sessionsCompleted > 0 &&
+    pomodoro.sessionsCompleted % 4 === 0;
+
   const useSpotifyNow =
     pomodoro.mode === 'focus'
       ? audioSettings.settings.useSpotifyForFocus
-      : audioSettings.settings.useSpotifyForBreak;
+      : isLongBreak
+        ? audioSettings.settings.useSpotifyForLongBreak
+        : audioSettings.settings.useSpotifyForBreak;
 
   // Local audio playback (only when not using Spotify for current mode)
   useAudioPlayer({
@@ -57,7 +65,9 @@ const Index = () => {
     const uri =
       pomodoro.mode === 'focus'
         ? audioSettings.settings.spotifyFocusUri
-        : audioSettings.settings.spotifyBreakUri;
+        : isLongBreak
+          ? audioSettings.settings.spotifyLongBreakUri
+          : audioSettings.settings.spotifyBreakUri;
 
     const key = `${pomodoro.mode}:${uri}`;
 
@@ -119,6 +129,8 @@ const Index = () => {
     spotify.playerReady,
     audioSettings.settings.spotifyFocusUri,
     audioSettings.settings.spotifyBreakUri,
+    audioSettings.settings.spotifyLongBreakUri,
+    isLongBreak,
   ]);
 
   const handleMusicToggle = () => setMusicEnabled((prev) => !prev);
@@ -208,8 +220,10 @@ const Index = () => {
         onSetVolume={audioSettings.setVolume}
         onSetSpotifyFocusUri={audioSettings.setSpotifyFocusUri}
         onSetSpotifyBreakUri={audioSettings.setSpotifyBreakUri}
+        onSetSpotifyLongBreakUri={audioSettings.setSpotifyLongBreakUri}
         onToggleUseSpotifyForFocus={audioSettings.toggleUseSpotifyForFocus}
         onToggleUseSpotifyForBreak={audioSettings.toggleUseSpotifyForBreak}
+        onToggleUseSpotifyForLongBreak={audioSettings.toggleUseSpotifyForLongBreak}
         spotify={{
           isConnected: spotify.isConnected,
           isPremium: spotify.isPremium,
