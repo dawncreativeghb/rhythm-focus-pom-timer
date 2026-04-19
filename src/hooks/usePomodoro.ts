@@ -65,12 +65,11 @@ export function usePomodoro(settings: PomodoroSettings = DEFAULT_SETTINGS) {
   }, [mode, settings]);
 
   const switchMode = useCallback((newMode: TimerMode, nextSessionCount?: number, opts?: { keepRunning?: boolean }) => {
-    setMode(newMode);
-    if (!opts?.keepRunning) {
-      setIsRunning(false);
-    }
     const sessCount = nextSessionCount ?? sessionsCompleted;
     const willBeLongBreak = newMode === 'break' && sessCount > 0 && sessCount % settings.sessionsBeforeLongBreak === 0;
+
+    setMode(newMode);
+    setIsRunning(Boolean(opts?.keepRunning));
     setTimeRemaining(newMode === 'focus'
       ? settings.focusDuration * 60
       : (willBeLongBreak ? settings.longBreakDuration : settings.shortBreakDuration) * 60
@@ -78,9 +77,7 @@ export function usePomodoro(settings: PomodoroSettings = DEFAULT_SETTINGS) {
   }, [settings, sessionsCompleted]);
 
   const skipToNext = useCallback(() => {
-    // Preserve running state so the next mode auto-starts if the timer was already running
     const wasRunning = isRunning;
-    console.log('[Pomodoro] skipToNext', { mode, wasRunning, sessionsCompleted });
     if (mode === 'focus') {
       const newCount = sessionsCompleted + 1;
       setSessionsCompleted(newCount);

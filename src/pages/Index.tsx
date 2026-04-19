@@ -51,13 +51,7 @@ const Index = () => {
   );
 
   useEffect(() => {
-    if (!spotify.isConnected || !spotify.playerReady) {
-      console.log('[Spotify effect] skipped — not ready', {
-        connected: spotify.isConnected,
-        ready: spotify.playerReady,
-      });
-      return;
-    }
+    if (!spotify.isConnected || !spotify.playerReady) return;
 
     const shouldPlay = pomodoro.isRunning && musicEnabled && useSpotifyNow;
     const uri =
@@ -66,16 +60,6 @@ const Index = () => {
         : audioSettings.settings.spotifyBreakUri;
 
     const key = `${pomodoro.mode}:${uri}`;
-    console.log('[Spotify effect] run', {
-      mode: pomodoro.mode,
-      isRunning: pomodoro.isRunning,
-      musicEnabled,
-      useSpotifyNow,
-      shouldPlay,
-      uri,
-      key,
-      lastKey: lastPlayedRef.current,
-    });
 
     if (shouldPlay) {
       if (lastPlayedRef.current !== key) {
@@ -91,7 +75,6 @@ const Index = () => {
                 trackUri: state.trackUri,
                 positionMs: state.positionMs,
               });
-              console.log('[Spotify] saved position for', previousUri, state);
             }
           }
           await spotify.pause();
