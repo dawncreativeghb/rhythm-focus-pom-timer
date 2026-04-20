@@ -43,6 +43,7 @@ const Index = () => {
     mode: pomodoro.mode,
     isRunning: pomodoro.isRunning && musicEnabled && !useSpotifyNow,
     isLongBreak,
+    timeRemaining: pomodoro.timeRemaining,
   });
 
   // Spotify volume sync
