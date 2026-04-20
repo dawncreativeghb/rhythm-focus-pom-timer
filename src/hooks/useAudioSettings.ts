@@ -4,9 +4,11 @@ export interface AudioSettings {
   focusMusic: AudioFile | null;
   breakChime: AudioFile | null;
   breakMusic: AudioFile | null;
+  longBreakMusic: AudioFile | null;
   focusMusicEnabled: boolean;
   breakChimeEnabled: boolean;
   breakMusicEnabled: boolean;
+  longBreakMusicEnabled: boolean;
   volume: number; // 0 to 1
   spotifyFocusUri: string;
   spotifyBreakUri: string;
@@ -28,9 +30,11 @@ const DEFAULT_SETTINGS: AudioSettings = {
   focusMusic: null,
   breakChime: null,
   breakMusic: null,
+  longBreakMusic: null,
   focusMusicEnabled: true,
   breakChimeEnabled: true,
   breakMusicEnabled: true,
+  longBreakMusicEnabled: true,
   volume: 0.7,
   spotifyFocusUri: '',
   spotifyBreakUri: '',
@@ -115,6 +119,18 @@ export function useAudioSettings() {
     }));
   }, []);
 
+  const setLongBreakMusic = useCallback(async (file: File | null) => {
+    if (!file) {
+      setSettings(prev => ({ ...prev, longBreakMusic: null }));
+      return;
+    }
+    const url = await fileToDataUrl(file);
+    setSettings(prev => ({
+      ...prev,
+      longBreakMusic: { name: file.name, url, type: file.type },
+    }));
+  }, []);
+
   const toggleFocusMusic = useCallback(() => {
     setSettings(prev => ({ ...prev, focusMusicEnabled: !prev.focusMusicEnabled }));
   }, []);
@@ -125,6 +141,10 @@ export function useAudioSettings() {
 
   const toggleBreakMusic = useCallback(() => {
     setSettings(prev => ({ ...prev, breakMusicEnabled: !prev.breakMusicEnabled }));
+  }, []);
+
+  const toggleLongBreakMusic = useCallback(() => {
+    setSettings(prev => ({ ...prev, longBreakMusicEnabled: !prev.longBreakMusicEnabled }));
   }, []);
 
   const setVolume = useCallback((volume: number) => {
@@ -165,9 +185,11 @@ export function useAudioSettings() {
     setFocusMusic,
     setBreakChime,
     setBreakMusic,
+    setLongBreakMusic,
     toggleFocusMusic,
     toggleBreakChime,
     toggleBreakMusic,
+    toggleLongBreakMusic,
     setVolume,
     clearAll,
     setSpotifyFocusUri,

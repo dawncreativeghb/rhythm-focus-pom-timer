@@ -40,9 +40,11 @@ interface AudioSettingsModalProps {
   onSetFocusMusic: (file: File | null) => void;
   onSetBreakChime: (file: File | null) => void;
   onSetBreakMusic: (file: File | null) => void;
+  onSetLongBreakMusic: (file: File | null) => void;
   onToggleFocusMusic: () => void;
   onToggleBreakChime: () => void;
   onToggleBreakMusic: () => void;
+  onToggleLongBreakMusic: () => void;
   onSetVolume: (volume: number) => void;
   onSetSpotifyFocusUri: (uri: string) => void;
   onSetSpotifyBreakUri: (uri: string) => void;
@@ -138,9 +140,11 @@ export function AudioSettingsModal({
   onSetFocusMusic,
   onSetBreakChime,
   onSetBreakMusic,
+  onSetLongBreakMusic,
   onToggleFocusMusic,
   onToggleBreakChime,
   onToggleBreakMusic,
+  onToggleLongBreakMusic,
   onSetVolume,
   onSetSpotifyFocusUri,
   onSetSpotifyBreakUri,
@@ -335,13 +339,23 @@ export function AudioSettingsModal({
               />
 
               <FileUploadRow
-                label="Break Music"
-                description="Plays during break time"
+                label="Short Break Music"
+                description="Plays during 5-min short breaks"
                 icon={<Music className="h-5 w-5" />}
                 file={settings.breakMusic}
                 enabled={settings.breakMusicEnabled}
                 onToggle={onToggleBreakMusic}
                 onFileSelect={(file) => onSetBreakMusic(file)}
+              />
+
+              <FileUploadRow
+                label="Long Break Music"
+                description="Plays during 30-min long breaks (every 4th break)"
+                icon={<Music className="h-5 w-5" />}
+                file={settings.longBreakMusic}
+                enabled={settings.longBreakMusicEnabled}
+                onToggle={onToggleLongBreakMusic}
+                onFileSelect={(file) => onSetLongBreakMusic(file)}
               />
             </div>
 

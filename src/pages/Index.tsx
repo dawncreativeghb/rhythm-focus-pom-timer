@@ -42,6 +42,7 @@ const Index = () => {
     settings: audioSettings.settings,
     mode: pomodoro.mode,
     isRunning: pomodoro.isRunning && musicEnabled && !useSpotifyNow,
+    isLongBreak,
   });
 
   // Spotify volume sync
@@ -214,9 +215,11 @@ const Index = () => {
         onSetFocusMusic={audioSettings.setFocusMusic}
         onSetBreakChime={audioSettings.setBreakChime}
         onSetBreakMusic={audioSettings.setBreakMusic}
+        onSetLongBreakMusic={audioSettings.setLongBreakMusic}
         onToggleFocusMusic={audioSettings.toggleFocusMusic}
         onToggleBreakChime={audioSettings.toggleBreakChime}
         onToggleBreakMusic={audioSettings.toggleBreakMusic}
+        onToggleLongBreakMusic={audioSettings.toggleLongBreakMusic}
         onSetVolume={audioSettings.setVolume}
         onSetSpotifyFocusUri={audioSettings.setSpotifyFocusUri}
         onSetSpotifyBreakUri={audioSettings.setSpotifyBreakUri}

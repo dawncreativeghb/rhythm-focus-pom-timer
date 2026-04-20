@@ -6,11 +6,13 @@ interface UseAudioPlayerOptions {
   settings: AudioSettings;
   mode: TimerMode;
   isRunning: boolean;
+  isLongBreak?: boolean;
 }
 
-export function useAudioPlayer({ settings, mode, isRunning }: UseAudioPlayerOptions) {
+export function useAudioPlayer({ settings, mode, isRunning, isLongBreak = false }: UseAudioPlayerOptions) {
   const focusAudioRef = useRef<HTMLAudioElement | null>(null);
   const breakAudioRef = useRef<HTMLAudioElement | null>(null);
+  const longBreakAudioRef = useRef<HTMLAudioElement | null>(null);
   const chimeAudioRef = useRef<HTMLAudioElement | null>(null);
   const previousModeRef = useRef<TimerMode>(mode);
 
@@ -30,7 +32,7 @@ export function useAudioPlayer({ settings, mode, isRunning }: UseAudioPlayerOpti
       focusAudioRef.current = null;
     }
 
-    // Break music
+    // Break music (short break)
     if (settings.breakMusic?.url) {
       if (!breakAudioRef.current) {
         breakAudioRef.current = new Audio();
@@ -44,6 +46,20 @@ export function useAudioPlayer({ settings, mode, isRunning }: UseAudioPlayerOpti
       breakAudioRef.current = null;
     }
 
+    // Long break music
+    if (settings.longBreakMusic?.url) {
+      if (!longBreakAudioRef.current) {
+        longBreakAudioRef.current = new Audio();
+        longBreakAudioRef.current.loop = true;
+      }
+      if (longBreakAudioRef.current.src !== settings.longBreakMusic.url) {
+        longBreakAudioRef.current.src = settings.longBreakMusic.url;
+      }
+    } else if (longBreakAudioRef.current) {
+      longBreakAudioRef.current.pause();
+      longBreakAudioRef.current = null;
+    }
+
     // Break chime
     if (settings.breakChime?.url) {
       if (!chimeAudioRef.current) {
@@ -55,19 +71,14 @@ export function useAudioPlayer({ settings, mode, isRunning }: UseAudioPlayerOpti
     } else if (chimeAudioRef.current) {
       chimeAudioRef.current = null;
     }
-  }, [settings.focusMusic?.url, settings.breakMusic?.url, settings.breakChime?.url]);
+  }, [settings.focusMusic?.url, settings.breakMusic?.url, settings.longBreakMusic?.url, settings.breakChime?.url]);
 
   // Update volume when settings change
   useEffect(() => {
-    if (focusAudioRef.current) {
-      focusAudioRef.current.volume = settings.volume;
-    }
-    if (breakAudioRef.current) {
-      breakAudioRef.current.volume = settings.volume;
-    }
-    if (chimeAudioRef.current) {
-      chimeAudioRef.current.volume = settings.volume;
-    }
+    if (focusAudioRef.current) focusAudioRef.current.volume = settings.volume;
+    if (breakAudioRef.current) breakAudioRef.current.volume = settings.volume;
+    if (longBreakAudioRef.current) longBreakAudioRef.current.volume = settings.volume;
+    if (chimeAudioRef.current) chimeAudioRef.current.volume = settings.volume;
   }, [settings.volume]);
 
   // Handle mode transitions - play chime when entering break
@@ -86,24 +97,36 @@ export function useAudioPlayer({ settings, mode, isRunning }: UseAudioPlayerOpti
   useEffect(() => {
     if (isRunning) {
       if (mode === 'focus') {
-        // Stop break music, start focus music
         breakAudioRef.current?.pause();
+        longBreakAudioRef.current?.pause();
         if (settings.focusMusicEnabled && focusAudioRef.current) {
           focusAudioRef.current.play().catch(console.error);
         }
       } else {
-        // Stop focus music, start break music
         focusAudioRef.current?.pause();
-        if (settings.breakMusicEnabled && breakAudioRef.current) {
-          breakAudioRef.current.play().catch(console.error);
+        if (isLongBreak) {
+          breakAudioRef.current?.pause();
+          // Prefer dedicated long-break track; fall back to short-break music
+          const target = longBreakAudioRef.current ?? breakAudioRef.current;
+          const enabled = longBreakAudioRef.current
+            ? settings.longBreakMusicEnabled
+            : settings.breakMusicEnabled;
+          if (enabled && target) {
+            target.play().catch(console.error);
+          }
+        } else {
+          longBreakAudioRef.current?.pause();
+          if (settings.breakMusicEnabled && breakAudioRef.current) {
+            breakAudioRef.current.play().catch(console.error);
+          }
         }
       }
     } else {
-      // Paused - stop all music
       focusAudioRef.current?.pause();
       breakAudioRef.current?.pause();
+      longBreakAudioRef.current?.pause();
     }
-  }, [mode, isRunning, settings.focusMusicEnabled, settings.breakMusicEnabled]);
+  }, [mode, isRunning, isLongBreak, settings.focusMusicEnabled, settings.breakMusicEnabled, settings.longBreakMusicEnabled]);
 
   const playChime = useCallback(() => {
     if (settings.breakChimeEnabled && chimeAudioRef.current) {
@@ -115,13 +138,14 @@ export function useAudioPlayer({ settings, mode, isRunning }: UseAudioPlayerOpti
   const stopAll = useCallback(() => {
     focusAudioRef.current?.pause();
     breakAudioRef.current?.pause();
+    longBreakAudioRef.current?.pause();
   }, []);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       focusAudioRef.current?.pause();
       breakAudioRef.current?.pause();
+      longBreakAudioRef.current?.pause();
     };
   }, []);
 
