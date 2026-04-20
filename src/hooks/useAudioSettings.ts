@@ -7,6 +7,8 @@ export interface AudioSettings {
   longBreakMusic: AudioFile | null;
   focusMusicEnabled: boolean;
   breakChimeEnabled: boolean;
+  breakWarningEnabled: boolean;
+  breakEndChimeEnabled: boolean;
   breakMusicEnabled: boolean;
   longBreakMusicEnabled: boolean;
   volume: number; // 0 to 1
@@ -33,6 +35,8 @@ const DEFAULT_SETTINGS: AudioSettings = {
   longBreakMusic: null,
   focusMusicEnabled: true,
   breakChimeEnabled: true,
+  breakWarningEnabled: true,
+  breakEndChimeEnabled: true,
   breakMusicEnabled: true,
   longBreakMusicEnabled: true,
   volume: 0.7,
@@ -139,6 +143,14 @@ export function useAudioSettings() {
     setSettings(prev => ({ ...prev, breakChimeEnabled: !prev.breakChimeEnabled }));
   }, []);
 
+  const toggleBreakWarning = useCallback(() => {
+    setSettings(prev => ({ ...prev, breakWarningEnabled: !prev.breakWarningEnabled }));
+  }, []);
+
+  const toggleBreakEndChime = useCallback(() => {
+    setSettings(prev => ({ ...prev, breakEndChimeEnabled: !prev.breakEndChimeEnabled }));
+  }, []);
+
   const toggleBreakMusic = useCallback(() => {
     setSettings(prev => ({ ...prev, breakMusicEnabled: !prev.breakMusicEnabled }));
   }, []);
@@ -188,6 +200,8 @@ export function useAudioSettings() {
     setLongBreakMusic,
     toggleFocusMusic,
     toggleBreakChime,
+    toggleBreakWarning,
+    toggleBreakEndChime,
     toggleBreakMusic,
     toggleLongBreakMusic,
     setVolume,
