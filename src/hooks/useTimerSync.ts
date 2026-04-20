@@ -11,7 +11,13 @@ interface PomodoroLike {
   sessionsCompleted: number;
   switchMode: (mode: TimerMode, nextSessionCount?: number, opts?: { keepRunning?: boolean }) => void;
   toggle: () => void;
-  setTimeRemaining: (n: number) => void;
+  syncState: (state: {
+    mode: TimerMode;
+    isRunning: boolean;
+    remainingSeconds: number;
+    sessionsCompleted: number;
+    startedAt: string | null;
+  }) => void;
 }
 
 interface RemoteRow {
@@ -49,24 +55,13 @@ export function useTimerSync(pomodoro: PomodoroLike) {
       const wantsRunning = row.is_running;
       const targetMode = (row.mode as TimerMode) ?? 'focus';
 
-      // Anchor to started_at so devices compute the same remaining time.
-      let computedRemaining = row.remaining_seconds;
-      if (wantsRunning && row.started_at) {
-        const elapsed = Math.floor((Date.now() - new Date(row.started_at).getTime()) / 1000);
-        computedRemaining = Math.max(0, row.remaining_seconds - elapsed);
-      }
-
-      if (
-        targetMode !== pomodoro.mode ||
-        row.sessions_completed !== pomodoro.sessionsCompleted
-      ) {
-        pomodoro.switchMode(targetMode, row.sessions_completed, { keepRunning: wantsRunning });
-      } else if (wantsRunning !== pomodoro.isRunning) {
-        pomodoro.toggle();
-      }
-
-      // Reconcile remaining time on every remote update.
-      pomodoro.setTimeRemaining(computedRemaining);
+      pomodoro.syncState({
+        mode: targetMode,
+        isRunning: wantsRunning,
+        remainingSeconds: row.remaining_seconds,
+        sessionsCompleted: row.sessions_completed,
+        startedAt: row.started_at,
+      });
 
       setTimeout(() => {
         applyingRemoteRef.current = false;
