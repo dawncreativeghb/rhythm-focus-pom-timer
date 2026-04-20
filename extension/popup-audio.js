@@ -8,7 +8,6 @@ import {
 
 const AUDIO_ROWS = [
   { key: 'focusMusic', enabledKey: 'focusMusicEnabled', fileInputId: 'audio-focus-file', toggleId: 'audio-focus-enabled', nameId: 'audio-focus-name', clearId: 'audio-focus-clear' },
-  { key: 'breakChime', enabledKey: 'breakChimeEnabled', fileInputId: 'audio-break-chime-file', toggleId: 'audio-break-chime-enabled', nameId: 'audio-break-chime-name', clearId: 'audio-break-chime-clear' },
   { key: 'breakMusic', enabledKey: 'breakMusicEnabled', fileInputId: 'audio-break-file', toggleId: 'audio-break-enabled', nameId: 'audio-break-name', clearId: 'audio-break-clear' },
   { key: 'longBreakMusic', enabledKey: 'longBreakMusicEnabled', fileInputId: 'audio-long-break-file', toggleId: 'audio-long-break-enabled', nameId: 'audio-long-break-name', clearId: 'audio-long-break-clear' },
 ];

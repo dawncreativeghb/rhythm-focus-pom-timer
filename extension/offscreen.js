@@ -93,21 +93,6 @@ async function playAudioFile(url, { loop = false, volume = 0.7 } = {}) {
 
 async function playChime(settings, kind) {
   const volume = settings?.volume ?? 0.7;
-
-  if (kind === 'start') {
-    if (settings?.breakChimeEnabled === false) return;
-    if (settings?.breakChime?.url) {
-      const played = await playAudioFile(settings.breakChime.url, { loop: false, volume });
-      if (played) {
-        await wait(1400);
-        if (ambientAudio && !ambientAudio.loop) stopAmbientAudio();
-        return;
-      }
-    }
-  }
-
-  if (kind === 'end' && settings?.breakEndChimeEnabled === false) return;
-  if (kind === 'warning' && settings?.breakWarningEnabled === false) return;
   await playBuiltInChime(kind, volume);
 }
 
