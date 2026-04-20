@@ -68,7 +68,10 @@
         padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px;
         background: var(--card);
       }
-      .account .email { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .account .email { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+      .account.signed-out { justify-content: center; }
+      .account.signed-out .email { display: none; }
+      .account.signed-out button { font-size: 13px; font-weight: 600; color: var(--fg); text-decoration: none; }
       .account button {
         background: transparent; border: 0; color: var(--muted);
         font-size: 11px; cursor: pointer; text-decoration: underline; padding: 0;
@@ -79,12 +82,15 @@
 
       /* Sign in panel */
       .signin {
-        width: 100%; display: flex; flex-direction: column; gap: 10px;
-        padding: 14px; border: 1px solid var(--border); border-radius: 10px;
+        width: 100%; display: flex; flex-direction: column; gap: 14px;
+        padding: 18px; border: 1px solid var(--border); border-radius: 10px;
         background: var(--card);
       }
-      .signin h3 { font-size: 13px; font-weight: 600; }
+      .signin h3 { font-size: 13px; font-weight: 600; text-align: center; margin-bottom: 4px; }
       .signin p { font-size: 11px; color: var(--muted); line-height: 1.4; }
+      .signin .google-section { display: flex; flex-direction: column; gap: 4px; }
+      .signin .email-section { display: flex; flex-direction: column; gap: 10px; }
+      .signin .divider { margin: 6px 0; }
       .signin input {
         background: var(--bg); color: var(--fg); border: 1px solid var(--border);
         border-radius: 8px; padding: 8px 10px; font-size: 12px; font-family: inherit;
@@ -133,13 +139,17 @@
 
       <div class="signin hidden" id="signin">
         <h3>Sign in to sync timer across devices</h3>
-        <button class="btn primary" id="signin-google">Sign in with Google</button>
+        <div class="google-section">
+          <button class="btn primary" id="signin-google">Sign in with Google</button>
+        </div>
         <div class="divider"><span>or</span></div>
-        <input type="email" id="email" placeholder="you@example.com" autocomplete="email" />
-        <input type="password" id="password" placeholder="Password" autocomplete="current-password" />
-        <div class="row">
-          <button class="btn primary" id="signin-submit">Sign in</button>
-          <button class="btn" id="signin-signup">Create account</button>
+        <div class="email-section">
+          <input type="email" id="email" placeholder="you@example.com" autocomplete="email" />
+          <input type="password" id="password" placeholder="Password" autocomplete="current-password" />
+          <div class="row">
+            <button class="btn primary" id="signin-submit">Sign in</button>
+            <button class="btn" id="signin-signup">Create account</button>
+          </div>
         </div>
         <div class="err" id="signin-err"></div>
       </div>
