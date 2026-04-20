@@ -42,6 +42,7 @@ const Index = () => {
     settings: audioSettings.settings,
     mode: pomodoro.mode,
     isRunning: pomodoro.isRunning && musicEnabled && !useSpotifyNow,
+    isLongBreak,
   });
 
   // Spotify volume sync
