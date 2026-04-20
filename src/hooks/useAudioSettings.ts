@@ -200,6 +200,8 @@ export function useAudioSettings() {
     setLongBreakMusic,
     toggleFocusMusic,
     toggleBreakChime,
+    toggleBreakWarning,
+    toggleBreakEndChime,
     toggleBreakMusic,
     toggleLongBreakMusic,
     setVolume,
