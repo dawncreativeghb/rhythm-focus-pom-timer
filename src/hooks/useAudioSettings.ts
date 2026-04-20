@@ -67,8 +67,10 @@ export function useAudioSettings() {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
-        const parsed = JSON.parse(stored) as AudioSettings;
-        setSettings(parsed);
+        const parsed = JSON.parse(stored) as Partial<AudioSettings>;
+        // Merge into defaults so newly-added fields aren't undefined for users
+        // with older saved settings.
+        setSettings({ ...DEFAULT_SETTINGS, ...parsed });
       }
     } catch (error) {
       console.error('Failed to load audio settings:', error);
