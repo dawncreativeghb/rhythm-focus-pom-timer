@@ -207,6 +207,19 @@ const Index = () => {
             ? 'Tap to control music • Settings for audio'
             : 'Tap settings to add music or connect Spotify'}
         </p>
+        {useSpotifyNow && spotify.isConnected && (
+          <p className="text-xs text-center max-w-xs">
+            {!spotify.isPremium && spotify.profile ? (
+              <span className="text-destructive">
+                Spotify Premium is required to play playlists in-app.
+              </span>
+            ) : !spotify.playerReady ? (
+              <span className="text-muted-foreground">Connecting Spotify player…</span>
+            ) : spotify.error ? (
+              <span className="text-destructive">{spotify.error}</span>
+            ) : null}
+          </p>
+        )}
       </motion.footer>
 
       <AudioSettingsModal
