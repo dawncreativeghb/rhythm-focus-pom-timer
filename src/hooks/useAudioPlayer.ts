@@ -32,7 +32,7 @@ export function useAudioPlayer({ settings, mode, isRunning, isLongBreak = false 
       focusAudioRef.current = null;
     }
 
-    // Break music
+    // Break music (short break)
     if (settings.breakMusic?.url) {
       if (!breakAudioRef.current) {
         breakAudioRef.current = new Audio();
@@ -46,6 +46,20 @@ export function useAudioPlayer({ settings, mode, isRunning, isLongBreak = false 
       breakAudioRef.current = null;
     }
 
+    // Long break music
+    if (settings.longBreakMusic?.url) {
+      if (!longBreakAudioRef.current) {
+        longBreakAudioRef.current = new Audio();
+        longBreakAudioRef.current.loop = true;
+      }
+      if (longBreakAudioRef.current.src !== settings.longBreakMusic.url) {
+        longBreakAudioRef.current.src = settings.longBreakMusic.url;
+      }
+    } else if (longBreakAudioRef.current) {
+      longBreakAudioRef.current.pause();
+      longBreakAudioRef.current = null;
+    }
+
     // Break chime
     if (settings.breakChime?.url) {
       if (!chimeAudioRef.current) {
@@ -57,19 +71,14 @@ export function useAudioPlayer({ settings, mode, isRunning, isLongBreak = false 
     } else if (chimeAudioRef.current) {
       chimeAudioRef.current = null;
     }
-  }, [settings.focusMusic?.url, settings.breakMusic?.url, settings.breakChime?.url]);
+  }, [settings.focusMusic?.url, settings.breakMusic?.url, settings.longBreakMusic?.url, settings.breakChime?.url]);
 
   // Update volume when settings change
   useEffect(() => {
-    if (focusAudioRef.current) {
-      focusAudioRef.current.volume = settings.volume;
-    }
-    if (breakAudioRef.current) {
-      breakAudioRef.current.volume = settings.volume;
-    }
-    if (chimeAudioRef.current) {
-      chimeAudioRef.current.volume = settings.volume;
-    }
+    if (focusAudioRef.current) focusAudioRef.current.volume = settings.volume;
+    if (breakAudioRef.current) breakAudioRef.current.volume = settings.volume;
+    if (longBreakAudioRef.current) longBreakAudioRef.current.volume = settings.volume;
+    if (chimeAudioRef.current) chimeAudioRef.current.volume = settings.volume;
   }, [settings.volume]);
 
   // Handle mode transitions - play chime when entering break
