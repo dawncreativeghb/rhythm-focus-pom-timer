@@ -333,14 +333,41 @@ export function AudioSettingsModal({
               />
 
               <FileUploadRow
-                label="Break Chime"
-                description="Plays when break starts"
+                label="Break Start Chime"
+                description="Plays when a break begins (uses default if no upload)"
                 icon={<Bell className="h-5 w-5" />}
                 file={settings.breakChime}
                 enabled={settings.breakChimeEnabled}
                 onToggle={onToggleBreakChime}
                 onFileSelect={(file) => onSetBreakChime(file)}
               />
+
+              {/* Transition cue toggles (use built-in default sounds) */}
+              <div className="flex flex-col gap-3 rounded-lg bg-secondary/50 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/20 text-primary">
+                    <Bell className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-foreground">Break Cues</p>
+                    <p className="text-xs text-muted-foreground">Built-in chimes — no upload needed</p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <Label className="text-xs">1-minute warning</Label>
+                  <Switch
+                    checked={settings.breakWarningEnabled}
+                    onCheckedChange={onToggleBreakWarning}
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <Label className="text-xs">Break-end chime</Label>
+                  <Switch
+                    checked={settings.breakEndChimeEnabled}
+                    onCheckedChange={onToggleBreakEndChime}
+                  />
+                </div>
+              </div>
 
               <FileUploadRow
                 label="Short Break Music"
