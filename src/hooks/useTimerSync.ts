@@ -49,14 +49,22 @@ export function useTimerSync(pomodoro: PomodoroLike) {
         user_id: user.id,
         mode: pomodoro.mode,
         is_running: pomodoro.isRunning,
-        started_at: pomodoro.isRunning ? new Date().toISOString() : null,
+        started_at: pomodoro.startedAt,
         remaining_seconds: pomodoro.timeRemaining,
         sessions_completed: pomodoro.sessionsCompleted,
         device_id: deviceId,
       },
       { onConflict: 'user_id' }
     );
-  }, [deviceId, pomodoro.isRunning, pomodoro.mode, pomodoro.sessionsCompleted, pomodoro.timeRemaining, user]);
+  }, [
+    deviceId,
+    pomodoro.isRunning,
+    pomodoro.mode,
+    pomodoro.sessionsCompleted,
+    pomodoro.startedAt,
+    pomodoro.timeRemaining,
+    user,
+  ]);
 
   // Hydrate + subscribe
   useEffect(() => {
