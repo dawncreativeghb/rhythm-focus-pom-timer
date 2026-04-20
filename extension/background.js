@@ -225,22 +225,42 @@ async function handleStateChanged(nextState) {
   await syncAudioForState(next, previous);
 }
 
-chrome.runtime.onMessage.addListener((msg) => {
+function sendAsyncResponse(sendResponse, work) {
+  work()
+    .then((result) => {
+      sendResponse(result ?? { ok: true });
+    })
+    .catch((error) => {
+      sendResponse({
+        ok: false,
+        error: error instanceof Error ? error.message : 'Background action failed.',
+      });
+    });
+}
+
+chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg?.type === 'state-changed') {
-    void handleStateChanged(msg.state);
-    return false;
+    sendAsyncResponse(sendResponse, async () => {
+      await handleStateChanged(msg.state);
+      return { ok: true };
+    });
+    return true;
   }
   if (msg?.type === 'auth-session') {
-    if (msg.session?.access_token && msg.session?.refresh_token) {
-      void applyExternalSession(msg.session);
-    } else {
-      void clearBackgroundSession();
-    }
-    return false;
+    sendAsyncResponse(sendResponse, async () => {
+      if (msg.session?.access_token && msg.session?.refresh_token) {
+        return applyExternalSession(msg.session);
+      }
+      return clearBackgroundSession();
+    });
+    return true;
   }
   if (msg?.type === 'auth-changed') {
-    void setupRealtime();
-    return false;
+    sendAsyncResponse(sendResponse, async () => {
+      await setupRealtime();
+      return { ok: true };
+    });
+    return true;
   }
   return false;
 });
