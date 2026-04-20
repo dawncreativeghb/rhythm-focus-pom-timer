@@ -13,6 +13,10 @@ import {
 } from './sync.js';
 
 const ALARM_NAME = 'pomodoro-end';
+const TRUSTED_WEB_ORIGINS = [
+  'https://rhythm-focus-pom-timer.lovable.app',
+  'https://id-preview--37956388-6962-4650-a7e8-68f572004607.lovable.app',
+];
 
 let realtimeChannel = null;
 let myDeviceId = null;
@@ -28,7 +32,6 @@ async function rescheduleAlarm() {
 }
 
 async function setupRealtime() {
-  // Tear down any existing channel first.
   if (realtimeChannel) {
     try {
       await supabase.removeChannel(realtimeChannel);
@@ -57,7 +60,7 @@ async function setupRealtime() {
       async (payload) => {
         const row = payload.new;
         if (!row) return;
-        if (row.device_id === myDeviceId) return; // ignore our own echo
+        if (row.device_id === myDeviceId) return;
         const next = fromRemoteRow(row);
         await setLocalState(next);
         await rescheduleAlarm();
@@ -66,12 +69,44 @@ async function setupRealtime() {
     .subscribe();
 }
 
+async function applyExternalSession(session) {
+  const { error } = await supabase.auth.setSession(session);
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+
+  await hydrateFromCloud();
+  await setupRealtime();
+  await rescheduleAlarm();
+  chrome.runtime.sendMessage({ type: 'extension-auth-updated' }).catch(() => {});
+
+  return { ok: true };
+}
+
 chrome.runtime.onMessage.addListener((msg) => {
   if (msg?.type === 'state-changed') {
     rescheduleAlarm();
   } else if (msg?.type === 'auth-changed') {
     setupRealtime();
   }
+});
+
+chrome.runtime.onMessageExternal.addListener((msg, sender, sendResponse) => {
+  const isTrustedSender = TRUSTED_WEB_ORIGINS.some((origin) => sender.url?.startsWith(origin));
+  if (msg?.type !== 'extension-auth-session' || !isTrustedSender) {
+    return false;
+  }
+
+  applyExternalSession(msg.session)
+    .then(sendResponse)
+    .catch((error) => {
+      sendResponse({
+        ok: false,
+        error: error instanceof Error ? error.message : 'Failed to apply session.',
+      });
+    });
+
+  return true;
 });
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
@@ -89,7 +124,6 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   next.remaining = durationFor(next);
   await setLocalState(next);
 
-  // Push the auto-advance to cloud if signed in so other devices follow along.
   const { data } = await supabase.auth.getSession();
   if (data?.session?.user) await pushState(next);
 
@@ -104,7 +138,6 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 
 async function bootstrap() {
   myDeviceId = await getDeviceId();
-  // If signed in, hydrate from cloud first so the alarm uses cloud state.
   const { data } = await supabase.auth.getSession();
   if (data?.session?.user) {
     await hydrateFromCloud();
@@ -116,5 +149,4 @@ async function bootstrap() {
 chrome.runtime.onStartup.addListener(bootstrap);
 chrome.runtime.onInstalled.addListener(bootstrap);
 
-// Service workers can be killed and revived; bootstrap on every script load.
 bootstrap();

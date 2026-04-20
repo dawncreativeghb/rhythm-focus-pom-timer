@@ -13,6 +13,7 @@ import {
 } from './sync.js';
 
 const WEB_APP_URL = 'https://rhythm-focus-pom-timer.lovable.app';
+const EXTENSION_AUTH_URL = `${WEB_APP_URL}/extension-auth?extensionId=${chrome.runtime.id}`;
 
 const $ = (id) => document.getElementById(id);
 const timeEl = $('time');
@@ -170,7 +171,7 @@ signinSubmit.addEventListener('click', () => doAuth('signin'));
 signinSignup.addEventListener('click', () => doAuth('signup'));
 signinWeb.addEventListener('click', (e) => {
   e.preventDefault();
-  chrome.tabs.create({ url: `${WEB_APP_URL}/auth` });
+  chrome.tabs.create({ url: EXTENSION_AUTH_URL });
 });
 
 // --- Live tick + auth wiring ---
@@ -189,6 +190,18 @@ window.addEventListener('unload', () => clearInterval(tickInterval));
 // React to background updating chrome.storage (auto-advance, realtime sync, etc.).
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area === 'local' && changes.state) render(changes.state.newValue);
+});
+
+chrome.runtime.onMessage.addListener((msg) => {
+  if (msg?.type !== 'extension-auth-updated') return;
+  supabase.auth.getSession().then(async ({ data }) => {
+    currentUser = data?.session?.user ?? null;
+    renderAccount();
+    if (currentUser) {
+      await hydrateFromCloud();
+      render(await getLocalState());
+    }
+  });
 });
 
 (async () => {
