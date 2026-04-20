@@ -1,10 +1,17 @@
-// Rhythm Focus popup — reads/writes timer state from chrome.storage,
-// background.js owns the alarm and authoritative ticking.
+// Rhythm Focus popup — local-only when signed out, synced via Supabase when signed in.
+// Background.js owns the alarm + auto-advance; popup just reads/writes state.
 
-const FOCUS_MIN = 25;
-const SHORT_BREAK_MIN = 5;
-const LONG_BREAK_MIN = 30;
-const SESSIONS_BEFORE_LONG = 4;
+import {
+  supabase,
+  getLocalState,
+  setLocalState,
+  durationFor,
+  hydrateFromCloud,
+  pushState,
+  fromRemoteRow,
+  getDeviceId,
+} from './sync.js';
+
 const WEB_APP_URL = 'https://rhythm-focus-pom-timer.lovable.app';
 
 const $ = (id) => document.getElementById(id);
@@ -16,17 +23,32 @@ const resetBtn = $('reset');
 const skipBtn = $('skip');
 const modeBtns = document.querySelectorAll('#mode-switch button');
 
-function durationFor(state) {
-  if (state.mode === 'focus') return FOCUS_MIN * 60;
-  return state.sessionsCompleted > 0 && state.sessionsCompleted % SESSIONS_BEFORE_LONG === 0
-    ? LONG_BREAK_MIN * 60
-    : SHORT_BREAK_MIN * 60;
-}
+const accountEl = $('account');
+const accountDot = $('account-dot');
+const accountEmail = $('account-email');
+const accountAction = $('account-action');
+const signinPanel = $('signin');
+const signinErr = $('signin-err');
+const signinSubmit = $('signin-submit');
+const signinSignup = $('signin-signup');
+const signinWeb = $('signin-web');
+const emailInput = $('email');
+const passwordInput = $('password');
+
+let currentUser = null;
+let deviceId = null;
 
 function format(sec) {
   const m = Math.floor(sec / 60);
   const s = sec % 60;
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+function computeRemaining(state) {
+  const total = durationFor(state);
+  if (!state.isRunning) return state.remaining ?? total;
+  const elapsed = Math.floor((Date.now() - state.startedAt) / 1000);
+  return Math.max(0, (state.remaining ?? total) - elapsed);
 }
 
 function render(state) {
@@ -43,48 +65,43 @@ function render(state) {
   });
 }
 
-function computeRemaining(state) {
-  const total = durationFor(state);
-  if (!state.isRunning) return state.remaining ?? total;
-  const elapsed = Math.floor((Date.now() - state.startedAt) / 1000);
-  return Math.max(0, (state.remaining ?? total) - elapsed);
+function renderAccount() {
+  if (currentUser) {
+    accountDot.className = 'dot';
+    accountEmail.textContent = currentUser.email ?? 'Signed in';
+    accountAction.textContent = 'Sign out';
+    signinPanel.classList.add('hidden');
+  } else {
+    accountDot.className = 'dot off';
+    accountEmail.textContent = 'Local only';
+    accountAction.textContent = 'Sign in';
+  }
 }
 
-async function getState() {
-  const { state } = await chrome.storage.local.get('state');
-  return (
-    state ?? {
-      mode: 'focus',
-      isRunning: false,
-      remaining: FOCUS_MIN * 60,
-      startedAt: null,
-      sessionsCompleted: 0,
-    }
-  );
-}
-
-async function setState(next) {
-  await chrome.storage.local.set({ state: next });
+// Apply state locally, push to cloud if signed in, and let background reschedule.
+async function updateState(next) {
+  await setLocalState(next);
   chrome.runtime.sendMessage({ type: 'state-changed' }).catch(() => {});
   render(next);
+  if (currentUser) pushState(next);
 }
 
 toggleBtn.addEventListener('click', async () => {
-  const s = await getState();
+  const s = await getLocalState();
   if (s.isRunning) {
-    await setState({ ...s, isRunning: false, remaining: computeRemaining(s), startedAt: null });
+    await updateState({ ...s, isRunning: false, remaining: computeRemaining(s), startedAt: null });
   } else {
-    await setState({ ...s, isRunning: true, startedAt: Date.now() });
+    await updateState({ ...s, isRunning: true, startedAt: Date.now() });
   }
 });
 
 resetBtn.addEventListener('click', async () => {
-  const s = await getState();
-  await setState({ ...s, isRunning: false, remaining: durationFor(s), startedAt: null });
+  const s = await getLocalState();
+  await updateState({ ...s, isRunning: false, remaining: durationFor(s), startedAt: null });
 });
 
 skipBtn.addEventListener('click', async () => {
-  const s = await getState();
+  const s = await getLocalState();
   const nextMode = s.mode === 'focus' ? 'break' : 'focus';
   const nextSessions = s.mode === 'focus' ? s.sessionsCompleted + 1 : s.sessionsCompleted;
   const next = {
@@ -95,17 +112,17 @@ skipBtn.addEventListener('click', async () => {
     startedAt: null,
   };
   next.remaining = durationFor(next);
-  await setState(next);
+  await updateState(next);
 });
 
 modeBtns.forEach((b) => {
   b.addEventListener('click', async () => {
-    const s = await getState();
+    const s = await getLocalState();
     const mode = b.dataset.mode;
     if (mode === s.mode) return;
     const next = { ...s, mode, isRunning: false, startedAt: null };
     next.remaining = durationFor(next);
-    await setState(next);
+    await updateState(next);
   });
 });
 
@@ -113,17 +130,87 @@ $('open-web').addEventListener('click', () => {
   chrome.tabs.create({ url: WEB_APP_URL });
 });
 
-// Live tick while popup is open
+// --- Auth UI ---
+
+accountAction.addEventListener('click', async () => {
+  if (currentUser) {
+    await supabase.auth.signOut();
+    currentUser = null;
+    renderAccount();
+  } else {
+    signinPanel.classList.toggle('hidden');
+    signinErr.textContent = '';
+  }
+});
+
+async function doAuth(method) {
+  const email = emailInput.value.trim();
+  const password = passwordInput.value;
+  if (!email || !password) {
+    signinErr.textContent = 'Email and password required.';
+    return;
+  }
+  signinErr.textContent = '';
+  const { data, error } =
+    method === 'signin'
+      ? await supabase.auth.signInWithPassword({ email, password })
+      : await supabase.auth.signUp({ email, password });
+  if (error) {
+    signinErr.textContent = error.message;
+    return;
+  }
+  if (method === 'signup' && !data.session) {
+    signinErr.textContent = 'Check your email to confirm your account, then sign in.';
+    return;
+  }
+  // signed in — onAuthStateChange handler will refresh UI + hydrate.
+}
+
+signinSubmit.addEventListener('click', () => doAuth('signin'));
+signinSignup.addEventListener('click', () => doAuth('signup'));
+signinWeb.addEventListener('click', (e) => {
+  e.preventDefault();
+  chrome.tabs.create({ url: `${WEB_APP_URL}/auth` });
+});
+
+// --- Live tick + auth wiring ---
+
 let tickInterval;
-async function startTicking() {
-  const s = await getState();
-  render(s);
+function startTicking() {
   if (tickInterval) clearInterval(tickInterval);
   tickInterval = setInterval(async () => {
-    const cur = await getState();
+    const cur = await getLocalState();
     render(cur);
   }, 500);
 }
-startTicking();
 
 window.addEventListener('unload', () => clearInterval(tickInterval));
+
+// React to background updating chrome.storage (auto-advance, realtime sync, etc.).
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === 'local' && changes.state) render(changes.state.newValue);
+});
+
+(async () => {
+  deviceId = await getDeviceId();
+  const { data } = await supabase.auth.getSession();
+  currentUser = data?.session?.user ?? null;
+  renderAccount();
+
+  if (currentUser) {
+    // Hydrate from cloud so popup shows the latest synced state immediately.
+    await hydrateFromCloud();
+    chrome.runtime.sendMessage({ type: 'auth-changed' }).catch(() => {});
+  }
+
+  render(await getLocalState());
+  startTicking();
+})();
+
+supabase.auth.onAuthStateChange(async (_event, session) => {
+  currentUser = session?.user ?? null;
+  renderAccount();
+  if (currentUser) await hydrateFromCloud();
+  chrome.runtime.sendMessage({ type: 'auth-changed' }).catch(() => {});
+  render(await getLocalState());
+});
