@@ -84,9 +84,12 @@ function computeRemaining(state) {
 
 function render(state) {
   const remaining = computeRemaining(state);
+  const total = durationFor(state);
+  const progress = total > 0 ? Math.max(0, Math.min(1, remaining / total)) : 0;
   timeEl.textContent = format(remaining);
   sessionEl.textContent = state.mode === 'focus' ? `Session ${state.sessionsCompleted + 1}` : 'Break time';
   ringEl.className = 'ring ' + state.mode;
+  ringEl.style.setProperty('--progress', progress.toFixed(4));
   toggleBtn.textContent = state.isRunning ? 'Pause' : 'Start';
   toggleBtn.className = 'btn primary' + (state.mode === 'break' ? ' break' : '');
   modeBtns.forEach((b) => {
@@ -332,9 +335,14 @@ function wireSpotify() {
   connectBtn?.addEventListener('click', async () => {
     if (errEl) errEl.textContent = '';
     connectBtn.disabled = true;
+    connectBtn.textContent = 'Connecting…';
     const result = await connectSpotifyViaIdentity();
     connectBtn.disabled = false;
-    if (!result.ok && errEl) errEl.textContent = result.error || 'Spotify connection failed.';
+    connectBtn.textContent = 'Connect';
+    if (!result.ok) {
+      console.warn('[spotify] connect failed', result.error);
+      if (errEl) errEl.textContent = result.error || 'Spotify connection failed.';
+    }
     await renderSpotify();
   });
 
@@ -392,6 +400,7 @@ function wireSpotify() {
     render(popupState);
   } catch (error) {
     console.warn('[popup] init error', error);
+    signinErr.textContent = error instanceof Error ? error.message : 'Extension startup failed.';
   }
 })();
 
