@@ -36,14 +36,23 @@
       .mode button.active { background: var(--primary); color: var(--primary-fg); }
       .mode button.active.break { background: var(--break); }
       .ring {
+        --progress: 0;
+        --ring-color: var(--primary);
         width: 180px; height: 180px; border-radius: 50%;
-        background: var(--card);
         display: flex; align-items: center; justify-content: center;
-        position: relative; border: 4px solid var(--border);
-        transition: border-color 0.3s;
+        position: relative;
+        background:
+          radial-gradient(circle at center, var(--card) 0 66%, transparent 67%),
+          conic-gradient(
+            var(--ring-color) 0turn calc((1 - var(--progress)) * 1turn),
+            hsl(215 25% 22% / 0.45) calc((1 - var(--progress)) * 1turn) 1turn
+          );
+        box-shadow: inset 0 0 0 1px hsl(215 25% 22% / 0.7);
+        transition: box-shadow 0.3s, background 0.3s;
       }
-      .ring.focus { border-color: var(--primary); box-shadow: 0 0 40px hsl(174 62% 47% / 0.3); }
-      .ring.break { border-color: var(--break); box-shadow: 0 0 40px hsl(38 92% 50% / 0.3); }
+      .ring.focus { --ring-color: var(--primary); box-shadow: 0 0 40px hsl(174 62% 47% / 0.3), inset 0 0 0 1px hsl(215 25% 22% / 0.7); }
+      .ring.break { --ring-color: var(--break); box-shadow: 0 0 40px hsl(38 92% 50% / 0.3), inset 0 0 0 1px hsl(215 25% 22% / 0.7); }
+      .ring-content { position: relative; z-index: 1; text-align: center; }
       .time { font-size: 42px; font-weight: 300; font-variant-numeric: tabular-nums; }
       .session { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
       .controls { display: flex; gap: 10px; width: 100%; }
@@ -164,7 +173,7 @@
         <button data-mode="break">Break</button>
       </div>
       <div class="ring focus" id="ring">
-        <div style="text-align: center;">
+        <div class="ring-content">
           <div class="time" id="time">25:00</div>
           <div class="session" id="session">Session 1</div>
         </div>

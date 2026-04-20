@@ -210,6 +210,13 @@ async function applyExternalSession(session) {
   return { ok: true };
 }
 
+async function clearBackgroundSession() {
+  await supabase.auth.signOut();
+  await setupRealtime();
+  await rescheduleAlarm();
+  return { ok: true };
+}
+
 async function handleStateChanged(nextState) {
   const previous = lastKnownState ?? normalizeState(await getLocalState());
   const next = normalizeState(nextState ?? (await getLocalState()));
@@ -221,6 +228,14 @@ async function handleStateChanged(nextState) {
 chrome.runtime.onMessage.addListener((msg) => {
   if (msg?.type === 'state-changed') {
     void handleStateChanged(msg.state);
+    return false;
+  }
+  if (msg?.type === 'auth-session') {
+    if (msg.session?.access_token && msg.session?.refresh_token) {
+      void applyExternalSession(msg.session);
+    } else {
+      void clearBackgroundSession();
+    }
     return false;
   }
   if (msg?.type === 'auth-changed') {
