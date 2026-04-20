@@ -35,6 +35,8 @@ const DEFAULT_SETTINGS: AudioSettings = {
   longBreakMusic: null,
   focusMusicEnabled: true,
   breakChimeEnabled: true,
+  breakWarningEnabled: true,
+  breakEndChimeEnabled: true,
   breakMusicEnabled: true,
   longBreakMusicEnabled: true,
   volume: 0.7,
