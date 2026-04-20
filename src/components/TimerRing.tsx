@@ -62,9 +62,9 @@ export function TimerRing({ progress, mode, isRunning, formattedTime }: TimerRin
           strokeWidth={strokeWidth}
           strokeLinecap="round"
           strokeDasharray={circumference}
-          initial={{ strokeDashoffset: circumference }}
+          initial={false}
           animate={{ strokeDashoffset }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
+          transition={{ duration: isRunning ? 1 : 0.3, ease: 'linear' }}
         />
       </svg>
 
