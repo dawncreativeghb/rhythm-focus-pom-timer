@@ -244,16 +244,34 @@ export function useSpotify() {
         throw new Error(error?.message || 'Failed to start login');
       }
       sessionStorage.setItem(STATE_KEY, data.state);
-      const top = window.top ?? window;
-      try {
-        top.location.href = data.url;
-      } catch {
+      // Detect if we're sandboxed in an iframe (Lovable preview). If so, top
+      // navigation will be blocked — open in a new tab instead and stop the
+      // spinner so the UI doesn't hang forever.
+      const inIframe = window.top !== window.self;
+      if (inIframe) {
         window.open(data.url, '_blank', 'noopener,noreferrer');
+        setIsLoading(false);
+        setError('Complete login in the new tab, then return here.');
+      } else {
+        window.location.href = data.url;
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Login failed');
       setIsLoading(false);
     }
+  }, []);
+
+  // When auth completes in another tab (popup flow), pick it up via storage events.
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== STORAGE_KEY) return;
+      const next = loadAuth();
+      setAuth(next);
+      setIsLoading(false);
+      if (next) setError(null);
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
   }, []);
 
   const disconnect = useCallback(() => {
