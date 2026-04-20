@@ -95,11 +95,15 @@
       .signin .err {
         color: var(--danger); font-size: 11px; min-height: 14px;
       }
-      .signin .web-link {
-        text-align: center; font-size: 11px; color: var(--muted);
+      .signin .divider {
+        display: flex; align-items: center; gap: 8px;
+        font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px;
       }
-      .signin .web-link a { color: var(--primary); text-decoration: none; }
-      .signin .web-link a:hover { text-decoration: underline; }
+      .signin .divider::before,
+      .signin .divider::after {
+        content: ''; flex: 1; height: 1px; background: var(--border);
+      }
+      .account { justify-content: space-between; }
 
       .hidden { display: none !important; }
     </style>
@@ -123,14 +127,14 @@
       </div>
 
       <div class="account" id="account">
-        <span class="dot off" id="account-dot"></span>
-        <span class="email" id="account-email">Local only</span>
+        <span class="email" id="account-email"></span>
         <button id="account-action">Sign in</button>
       </div>
 
       <div class="signin hidden" id="signin">
-        <h3>Sign in to sync</h3>
-        <p>Sign in with the same account you use on the web app to keep your timer in sync across devices.</p>
+        <h3>Sign in to sync timer across devices</h3>
+        <button class="btn primary" id="signin-google">Sign in with Google</button>
+        <div class="divider"><span>or</span></div>
         <input type="email" id="email" placeholder="you@example.com" autocomplete="email" />
         <input type="password" id="password" placeholder="Password" autocomplete="current-password" />
         <div class="row">
@@ -138,9 +142,6 @@
           <button class="btn" id="signin-signup">Create account</button>
         </div>
         <div class="err" id="signin-err"></div>
-        <div class="web-link">
-          Prefer Google? <a href="#" id="signin-web">Continue with Google</a>
-        </div>
       </div>
 
       <button class="open-web" id="open-web">Open full app</button>
