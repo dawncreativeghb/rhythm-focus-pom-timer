@@ -39,7 +39,7 @@ export function TimerRing({ progress, mode, isRunning, formattedTime }: TimerRin
       <svg
         width={size}
         height={size}
-        className="-rotate-90 -scale-x-100"
+        className="rotate-90 -scale-x-100"
         aria-hidden="true"
       >
         <circle
