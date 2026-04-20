@@ -395,6 +395,18 @@ export function useSpotify() {
     }
   }, [getValidToken]);
 
+  const primePlayback = useCallback(async () => {
+    try {
+      await playerRef.current?.activateElement?.();
+      setError(null);
+      return true;
+    } catch (e) {
+      console.warn('[Spotify] primePlayback failed', e);
+      setError('Spotify audio is blocked until you tap play again');
+      return false;
+    }
+  }, []);
+
   const getCurrentState = useCallback(async () => {
     if (!playerRef.current) return null;
     try {
@@ -431,6 +443,7 @@ export function useSpotify() {
     connect,
     disconnect,
     handleCallback,
+    primePlayback,
     play,
     pause,
     setVolume,
