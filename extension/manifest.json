@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
   "name": "Rhythm Focus — Pomodoro",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Minimalist Pomodoro timer in your browser. 25m focus, 5m breaks, long break after 4 sessions. Optional sign-in syncs with the web app.",
-  "permissions": ["storage", "alarms", "notifications"],
+  "permissions": ["storage", "alarms", "notifications", "offscreen"],
   "host_permissions": [
     "https://yuwkjkyzzlcgsqojizfl.supabase.co/*",
     "wss://yuwkjkyzzlcgsqojizfl.supabase.co/*"

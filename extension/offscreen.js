@@ -38,6 +38,10 @@ function playTone(ctx, masterVolume, { freq, startAt, duration, volume, type = '
   osc.stop(t0 + duration + 0.05);
 }
 
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function playBuiltInChime(kind, volume) {
   const ctx = await ensureAudioContextRunning();
   if (!ctx) return;
@@ -45,18 +49,21 @@ async function playBuiltInChime(kind, volume) {
   if (kind === 'start') {
     playTone(ctx, volume, { freq: 659.25, startAt: 0, duration: 1.0, volume: 0.45 });
     playTone(ctx, volume, { freq: 880.0, startAt: 0.18, duration: 1.2, volume: 0.4 });
+    await wait(1400);
     return;
   }
 
   if (kind === 'warning') {
     playTone(ctx, volume, { freq: 783.99, startAt: 0, duration: 0.55, volume: 0.4 });
     playTone(ctx, volume, { freq: 783.99, startAt: 0.28, duration: 0.55, volume: 0.32 });
+    await wait(900);
     return;
   }
 
   playTone(ctx, volume, { freq: 523.25, startAt: 0.0, duration: 0.5, volume: 0.4 });
   playTone(ctx, volume, { freq: 659.25, startAt: 0.16, duration: 0.5, volume: 0.4 });
   playTone(ctx, volume, { freq: 783.99, startAt: 0.32, duration: 0.9, volume: 0.45 });
+  await wait(1300);
 }
 
 function stopAmbientAudio() {
@@ -68,7 +75,7 @@ function stopAmbientAudio() {
 }
 
 async function playAudioFile(url, { loop = false, volume = 0.7 } = {}) {
-  if (!url) return;
+  if (!url) return false;
   stopAmbientAudio();
   const audio = new Audio(url);
   audio.loop = loop;
@@ -76,26 +83,31 @@ async function playAudioFile(url, { loop = false, volume = 0.7 } = {}) {
   ambientAudio = audio;
   try {
     await audio.play();
+    return true;
   } catch (error) {
     console.warn('[offscreen] audio playback failed', error);
     if (ambientAudio === audio) ambientAudio = null;
+    return false;
   }
 }
 
 async function playChime(settings, kind) {
   const volume = settings?.volume ?? 0.7;
-  if (kind === 'start' && settings?.breakChimeEnabled && settings?.breakChime?.url) {
-    await playAudioFile(settings.breakChime.url, { loop: false, volume });
-    await new Promise((resolve) => setTimeout(resolve, 1400));
-    if (ambientAudio && !ambientAudio.loop) {
-      stopAmbientAudio();
+
+  if (kind === 'start') {
+    if (settings?.breakChimeEnabled === false) return;
+    if (settings?.breakChime?.url) {
+      const played = await playAudioFile(settings.breakChime.url, { loop: false, volume });
+      if (played) {
+        await wait(1400);
+        if (ambientAudio && !ambientAudio.loop) stopAmbientAudio();
+        return;
+      }
     }
-    return;
   }
 
   if (kind === 'end' && settings?.breakEndChimeEnabled === false) return;
   if (kind === 'warning' && settings?.breakWarningEnabled === false) return;
-  if (kind === 'start' && settings?.breakChimeEnabled === false) return;
   await playBuiltInChime(kind, volume);
 }
 
@@ -112,9 +124,14 @@ async function playBreakSequence(settings, isLongBreak) {
   }
 }
 
-async function playFocusMusic(settings) {
-  sequenceId += 1;
+async function playFocusSequence(settings, transitionedFromBreak) {
+  const currentSequence = ++sequenceId;
   stopAmbientAudio();
+  if (transitionedFromBreak) {
+    await playChime(settings, 'end');
+    if (currentSequence !== sequenceId) return;
+  }
+
   if (settings?.focusMusicEnabled && settings?.focusMusic?.url) {
     await playAudioFile(settings.focusMusic.url, { loop: true, volume: settings?.volume ?? 0.7 });
   }
@@ -127,7 +144,7 @@ async function handleMessage(message) {
       stopAmbientAudio();
       return { ok: true };
     case 'audio-play-focus':
-      await playFocusMusic(message.settings || {});
+      await playFocusSequence(message.settings || {}, Boolean(message.transitionedFromBreak));
       return { ok: true };
     case 'audio-play-break':
       await playBreakSequence(message.settings || {}, Boolean(message.isLongBreak));
