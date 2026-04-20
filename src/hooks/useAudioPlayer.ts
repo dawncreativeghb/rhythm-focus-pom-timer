@@ -97,24 +97,36 @@ export function useAudioPlayer({ settings, mode, isRunning, isLongBreak = false 
   useEffect(() => {
     if (isRunning) {
       if (mode === 'focus') {
-        // Stop break music, start focus music
         breakAudioRef.current?.pause();
+        longBreakAudioRef.current?.pause();
         if (settings.focusMusicEnabled && focusAudioRef.current) {
           focusAudioRef.current.play().catch(console.error);
         }
       } else {
-        // Stop focus music, start break music
         focusAudioRef.current?.pause();
-        if (settings.breakMusicEnabled && breakAudioRef.current) {
-          breakAudioRef.current.play().catch(console.error);
+        if (isLongBreak) {
+          breakAudioRef.current?.pause();
+          // Prefer dedicated long-break track; fall back to short-break music
+          const target = longBreakAudioRef.current ?? breakAudioRef.current;
+          const enabled = longBreakAudioRef.current
+            ? settings.longBreakMusicEnabled
+            : settings.breakMusicEnabled;
+          if (enabled && target) {
+            target.play().catch(console.error);
+          }
+        } else {
+          longBreakAudioRef.current?.pause();
+          if (settings.breakMusicEnabled && breakAudioRef.current) {
+            breakAudioRef.current.play().catch(console.error);
+          }
         }
       }
     } else {
-      // Paused - stop all music
       focusAudioRef.current?.pause();
       breakAudioRef.current?.pause();
+      longBreakAudioRef.current?.pause();
     }
-  }, [mode, isRunning, settings.focusMusicEnabled, settings.breakMusicEnabled]);
+  }, [mode, isRunning, isLongBreak, settings.focusMusicEnabled, settings.breakMusicEnabled, settings.longBreakMusicEnabled]);
 
   const playChime = useCallback(() => {
     if (settings.breakChimeEnabled && chimeAudioRef.current) {
@@ -126,13 +138,14 @@ export function useAudioPlayer({ settings, mode, isRunning, isLongBreak = false 
   const stopAll = useCallback(() => {
     focusAudioRef.current?.pause();
     breakAudioRef.current?.pause();
+    longBreakAudioRef.current?.pause();
   }, []);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       focusAudioRef.current?.pause();
       breakAudioRef.current?.pause();
+      longBreakAudioRef.current?.pause();
     };
   }, []);
 
