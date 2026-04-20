@@ -68,12 +68,13 @@ function render(state) {
 function renderAccount() {
   if (currentUser) {
     accountEmail.textContent = currentUser.email ?? 'Signed in';
-    accountEmail.style.display = '';
     accountAction.textContent = 'Sign out';
+    accountEl.classList.remove('signed-out');
     signinPanel.classList.add('hidden');
   } else {
-    accountEmail.style.display = 'none';
+    accountEmail.textContent = '';
     accountAction.textContent = 'Sign in';
+    accountEl.classList.add('signed-out');
   }
 }
 
