@@ -9,6 +9,7 @@ interface PomodoroLike {
   isRunning: boolean;
   timeRemaining: number;
   sessionsCompleted: number;
+  startedAt: string | null;
   switchMode: (mode: TimerMode, nextSessionCount?: number, opts?: { keepRunning?: boolean }) => void;
   toggle: () => void;
   syncState: (state: {
@@ -114,7 +115,7 @@ export function useTimerSync(pomodoro: PomodoroLike) {
           user_id: user.id,
           mode: pomodoro.mode,
           is_running: pomodoro.isRunning,
-          started_at: pomodoro.isRunning ? new Date().toISOString() : null,
+          started_at: pomodoro.startedAt,
           remaining_seconds: pomodoro.timeRemaining,
           sessions_completed: pomodoro.sessionsCompleted,
           device_id: deviceId,
