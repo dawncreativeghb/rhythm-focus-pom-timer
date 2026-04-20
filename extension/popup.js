@@ -8,6 +8,17 @@ import {
   getDeviceId,
 } from './sync.js';
 import { initPopupAudio } from './popup-audio.js';
+import {
+  getSpotifyAuth,
+  clearSpotifyAuth,
+  getSpotifyProfile,
+  connectSpotifyViaIdentity,
+} from './spotify-auth.js';
+import {
+  getAudioSettings,
+  updateAudioSettings,
+  pushAudioSettings,
+} from './audio-settings.js';
 
 const WEB_APP_URL = 'https://rhythm-focus-pom-timer.lovable.app';
 const EXTENSION_AUTH_URL = `${WEB_APP_URL}/extension-auth?extensionId=${chrome.runtime.id}`;
@@ -250,27 +261,138 @@ chrome.runtime.onMessage.addListener((msg) => {
   });
 });
 
-(async () => {
-  audioUi = initPopupAudio({
-    isSignedIn: () => Boolean(currentUser),
-  });
+async function persistAudioPatch(patch) {
+  const next = await updateAudioSettings(patch);
+  if (currentUser) await pushAudioSettings(next);
+  return next;
+}
 
-  deviceId = await getDeviceId();
-  const { data } = await supabase.auth.getSession();
-  currentUser = data?.session?.user ?? null;
-  renderAccount();
+const SPOTIFY_FIELDS = [
+  { uriId: 'spotify-focus-uri', toggleId: 'spotify-focus-enabled', uriKey: 'spotifyFocusUri', enabledKey: 'useSpotifyForFocus' },
+  { uriId: 'spotify-break-uri', toggleId: 'spotify-break-enabled', uriKey: 'spotifyBreakUri', enabledKey: 'useSpotifyForBreak' },
+  { uriId: 'spotify-long-break-uri', toggleId: 'spotify-long-break-enabled', uriKey: 'spotifyLongBreakUri', enabledKey: 'useSpotifyForLongBreak' },
+];
 
-  if (currentUser) {
-    await hydrateFromCloud();
-    await audioUi.hydrateSignedIn();
-    await notifyBackground({ type: 'auth-changed' });
-  } else {
-    await audioUi.refresh();
+async function renderSpotify() {
+  const auth = await getSpotifyAuth();
+  const settings = await getAudioSettings();
+  const statusEl = $('spotify-status');
+  const metaEl = $('spotify-meta');
+  const errEl = $('spotify-error');
+  const connectBtn = $('spotify-connect');
+  const disconnectBtn = $('spotify-disconnect');
+
+  if (errEl) errEl.textContent = '';
+
+  for (const field of SPOTIFY_FIELDS) {
+    const uriInput = $(field.uriId);
+    const toggle = $(field.toggleId);
+    if (uriInput) {
+      uriInput.value = settings[field.uriKey] || '';
+      uriInput.disabled = !auth;
+    }
+    if (toggle) {
+      toggle.checked = Boolean(settings[field.enabledKey]);
+      toggle.disabled = !auth;
+    }
   }
 
+  if (!auth) {
+    if (statusEl) statusEl.textContent = 'Not connected';
+    if (metaEl) metaEl.textContent = 'Use your Spotify playlists for focus and break sessions.';
+    connectBtn?.classList.remove('hidden');
+    disconnectBtn?.classList.add('hidden');
+    return;
+  }
+
+  connectBtn?.classList.add('hidden');
+  disconnectBtn?.classList.remove('hidden');
+  if (statusEl) statusEl.textContent = 'Connected';
+  if (metaEl) metaEl.textContent = 'Loading account…';
+
+  const profile = await getSpotifyProfile();
+  if (profile) {
+    if (statusEl) statusEl.textContent = profile.display_name;
+    if (metaEl) {
+      metaEl.textContent =
+        profile.product === 'premium'
+          ? 'Spotify Premium — full playback control.'
+          : 'Spotify Free — playback requires a Premium account.';
+    }
+  } else if (metaEl) {
+    metaEl.textContent = 'Connected, but profile lookup failed.';
+  }
+}
+
+function wireSpotify() {
+  const connectBtn = $('spotify-connect');
+  const disconnectBtn = $('spotify-disconnect');
+  const errEl = $('spotify-error');
+
+  connectBtn?.addEventListener('click', async () => {
+    if (errEl) errEl.textContent = '';
+    connectBtn.disabled = true;
+    const result = await connectSpotifyViaIdentity();
+    connectBtn.disabled = false;
+    if (!result.ok && errEl) errEl.textContent = result.error || 'Spotify connection failed.';
+    await renderSpotify();
+  });
+
+  disconnectBtn?.addEventListener('click', async () => {
+    await clearSpotifyAuth();
+    await renderSpotify();
+  });
+
+  for (const field of SPOTIFY_FIELDS) {
+    const uriInput = $(field.uriId);
+    const toggle = $(field.toggleId);
+
+    if (uriInput) {
+      uriInput.addEventListener('change', async (event) => {
+        await persistAudioPatch({ [field.uriKey]: String(event.currentTarget.value || '').trim() });
+      });
+    }
+
+    if (toggle) {
+      toggle.addEventListener('change', async (event) => {
+        await persistAudioPatch({ [field.enabledKey]: Boolean(event.currentTarget.checked) });
+      });
+    }
+  }
+}
+
+(async () => {
+  // Render the timer immediately from local storage so it never appears frozen.
   popupState = normalizeState(await getLocalState());
   render(popupState);
   startTicking();
+
+  audioUi = initPopupAudio({
+    isSignedIn: () => Boolean(currentUser),
+  });
+  wireSpotify();
+  await renderSpotify();
+
+  try {
+    deviceId = await getDeviceId();
+    const { data } = await supabase.auth.getSession();
+    currentUser = data?.session?.user ?? null;
+    renderAccount();
+
+    if (currentUser) {
+      await hydrateFromCloud();
+      await audioUi.hydrateSignedIn();
+      await renderSpotify();
+      await notifyBackground({ type: 'auth-changed' });
+    } else {
+      await audioUi.refresh();
+    }
+
+    popupState = normalizeState(await getLocalState());
+    render(popupState);
+  } catch (error) {
+    console.warn('[popup] init error', error);
+  }
 })();
 
 supabase.auth.onAuthStateChange(async (_event, session) => {
