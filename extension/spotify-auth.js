@@ -2,7 +2,6 @@ import { supabase } from './sync.js';
 
 const STORAGE_KEY = 'spotifyAuth';
 const REFRESH_BUFFER_MS = 60_000;
-const SPOTIFY_CLIENT_ID = '980fe05b9d3d4d49b5f703a9e05252ea';
 const SPOTIFY_SCOPES = [
   'streaming',
   'user-read-email',
@@ -12,27 +11,67 @@ const SPOTIFY_SCOPES = [
   'user-read-currently-playing',
 ].join(' ');
 
+let pendingLoginUrl = null;
+let cachedLoginUrl = null;
+let cachedLoginRedirectUri = null;
+
 export function getSpotifyRedirectUri() {
   // chrome.identity gives us a stable https://<extension-id>.chromiumapp.org/* URL
   // that Spotify will accept as a redirect URI (must be added in the Spotify dashboard).
   return chrome.identity.getRedirectURL('spotify');
 }
 
+async function getSpotifyLoginUrl(redirectUri) {
+  if (cachedLoginUrl && cachedLoginRedirectUri === redirectUri) {
+    return cachedLoginUrl;
+  }
+
+  if (pendingLoginUrl && cachedLoginRedirectUri === redirectUri) {
+    return pendingLoginUrl;
+  }
+
+  cachedLoginRedirectUri = redirectUri;
+  pendingLoginUrl = supabase.functions
+    .invoke('spotify-auth', {
+      body: { action: 'login', redirect_uri: redirectUri },
+    })
+    .then(({ data, error }) => {
+      if (error || !data?.url) {
+        throw new Error(error?.message || data?.error || 'Spotify login setup failed.');
+      }
+
+      const url = new URL(data.url);
+      url.searchParams.set('scope', SPOTIFY_SCOPES);
+      url.searchParams.set('show_dialog', 'true');
+      cachedLoginUrl = url.toString();
+      return cachedLoginUrl;
+    })
+    .finally(() => {
+      pendingLoginUrl = null;
+    });
+
+  return pendingLoginUrl;
+}
+
+export async function primeSpotifyLogin() {
+  return getSpotifyLoginUrl(getSpotifyRedirectUri());
+}
+
 export async function connectSpotifyViaIdentity() {
   const redirectUri = getSpotifyRedirectUri();
-  const authUrl = new URL('https://accounts.spotify.com/authorize');
-  authUrl.searchParams.set('response_type', 'code');
-  authUrl.searchParams.set('client_id', SPOTIFY_CLIENT_ID);
-  authUrl.searchParams.set('scope', SPOTIFY_SCOPES);
-  authUrl.searchParams.set('redirect_uri', redirectUri);
-  authUrl.searchParams.set('state', crypto.randomUUID());
-  authUrl.searchParams.set('show_dialog', 'true');
+  let authUrl;
+
+  try {
+    authUrl = await getSpotifyLoginUrl(redirectUri);
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : 'Spotify login setup failed.' };
+  }
 
   let redirectResponseUrl;
   try {
     redirectResponseUrl = await new Promise((resolve, reject) => {
       chrome.identity.launchWebAuthFlow(
-        { url: authUrl.toString(), interactive: true },
+        { url: authUrl, interactive: true },
         (responseUrl) => {
           if (chrome.runtime.lastError) return reject(new Error(chrome.runtime.lastError.message));
           if (!responseUrl) return reject(new Error('Spotify sign-in was cancelled.'));

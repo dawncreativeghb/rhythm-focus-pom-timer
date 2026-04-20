@@ -53,6 +53,7 @@ export function useTimerSync(pomodoro: PomodoroLike) {
         remaining_seconds: pomodoro.timeRemaining,
         sessions_completed: pomodoro.sessionsCompleted,
         device_id: deviceId,
+        updated_at: new Date().toISOString(),
       },
       { onConflict: 'user_id' }
     );
