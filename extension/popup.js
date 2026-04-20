@@ -25,14 +25,13 @@ const skipBtn = $('skip');
 const modeBtns = document.querySelectorAll('#mode-switch button');
 
 const accountEl = $('account');
-const accountDot = $('account-dot');
 const accountEmail = $('account-email');
 const accountAction = $('account-action');
 const signinPanel = $('signin');
 const signinErr = $('signin-err');
 const signinSubmit = $('signin-submit');
 const signinSignup = $('signin-signup');
-const signinWeb = $('signin-web');
+const signinGoogle = $('signin-google');
 const emailInput = $('email');
 const passwordInput = $('password');
 
@@ -68,13 +67,12 @@ function render(state) {
 
 function renderAccount() {
   if (currentUser) {
-    accountDot.className = 'dot';
     accountEmail.textContent = currentUser.email ?? 'Signed in';
+    accountEmail.style.display = '';
     accountAction.textContent = 'Sign out';
     signinPanel.classList.add('hidden');
   } else {
-    accountDot.className = 'dot off';
-    accountEmail.textContent = 'Local only';
+    accountEmail.style.display = 'none';
     accountAction.textContent = 'Sign in';
   }
 }
@@ -169,7 +167,7 @@ async function doAuth(method) {
 
 signinSubmit.addEventListener('click', () => doAuth('signin'));
 signinSignup.addEventListener('click', () => doAuth('signup'));
-signinWeb.addEventListener('click', (e) => {
+signinGoogle.addEventListener('click', (e) => {
   e.preventDefault();
   chrome.tabs.create({ url: EXTENSION_AUTH_URL });
 });
