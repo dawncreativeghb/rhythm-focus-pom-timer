@@ -139,6 +139,13 @@
         display: flex; flex-direction: column; gap: 8px; padding: 12px;
         border: 1px solid var(--border); border-radius: 8px; background: hsl(222 47% 13%);
       }
+      .audio-stack { display: flex; flex-direction: column; gap: 10px; }
+      .spotify-status { display: flex; flex-direction: column; gap: 4px; }
+      .spotify-meta, .spotify-error { font-size: 11px; color: var(--muted); }
+      .spotify-error { color: var(--danger); min-height: 14px; }
+      .spotify-actions { display: flex; gap: 8px; }
+      .spotify-input { background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 12px; font-family: inherit; width: 100%; }
+      .spotify-input:disabled { opacity: 0.55; }
       .audio-toggle {
         width: 16px; height: 16px; accent-color: var(--primary);
       }
@@ -193,6 +200,45 @@
       <details class="audio" id="audio-panel">
         <summary>Audio</summary>
         <div class="audio-body">
+          <div class="audio-item audio-stack">
+            <div class="audio-item-head">
+              <span class="audio-label">Spotify</span>
+              <div class="spotify-actions">
+                <button class="btn primary" id="spotify-connect" type="button">Connect</button>
+                <button class="btn hidden" id="spotify-disconnect" type="button">Disconnect</button>
+              </div>
+            </div>
+            <div class="spotify-status">
+              <span class="audio-name" id="spotify-status">Not connected</span>
+              <span class="spotify-meta" id="spotify-meta">Use your Spotify playlists for focus and break sessions.</span>
+            </div>
+            <div class="spotify-error" id="spotify-error"></div>
+
+            <div class="audio-item">
+              <div class="audio-item-head">
+                <span class="audio-label">Use Spotify for Focus</span>
+                <input class="audio-toggle" id="spotify-focus-enabled" type="checkbox" />
+              </div>
+              <input class="spotify-input" id="spotify-focus-uri" type="text" placeholder="Paste Spotify playlist link" />
+            </div>
+
+            <div class="audio-item">
+              <div class="audio-item-head">
+                <span class="audio-label">Use Spotify for Short Break</span>
+                <input class="audio-toggle" id="spotify-break-enabled" type="checkbox" />
+              </div>
+              <input class="spotify-input" id="spotify-break-uri" type="text" placeholder="Paste Spotify playlist link" />
+            </div>
+
+            <div class="audio-item">
+              <div class="audio-item-head">
+                <span class="audio-label">Use Spotify for Long Break</span>
+                <input class="audio-toggle" id="spotify-long-break-enabled" type="checkbox" />
+              </div>
+              <input class="spotify-input" id="spotify-long-break-uri" type="text" placeholder="Paste Spotify playlist link" />
+            </div>
+          </div>
+
           <div class="audio-volume">
             <div class="audio-volume-row">
               <span class="audio-label">Volume</span>
