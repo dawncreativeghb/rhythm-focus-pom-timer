@@ -13,6 +13,7 @@
         --primary-fg: hsl(222 47% 11%);
         --break: hsl(38 92% 50%);
         --border: hsl(215 25% 22%);
+        --danger: hsl(0 70% 60%);
       }
       * { box-sizing: border-box; margin: 0; padding: 0; }
       html, body {
@@ -59,6 +60,48 @@
         cursor: pointer; text-decoration: underline; padding: 0;
       }
       .open-web:hover { color: var(--fg); }
+
+      /* Account row */
+      .account {
+        width: 100%; display: flex; align-items: center; justify-content: space-between;
+        gap: 8px; font-size: 11px; color: var(--muted);
+        padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px;
+        background: var(--card);
+      }
+      .account .email { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .account button {
+        background: transparent; border: 0; color: var(--muted);
+        font-size: 11px; cursor: pointer; text-decoration: underline; padding: 0;
+      }
+      .account button:hover { color: var(--fg); }
+      .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--primary); flex-shrink: 0; }
+      .dot.off { background: var(--muted); }
+
+      /* Sign in panel */
+      .signin {
+        width: 100%; display: flex; flex-direction: column; gap: 10px;
+        padding: 14px; border: 1px solid var(--border); border-radius: 10px;
+        background: var(--card);
+      }
+      .signin h3 { font-size: 13px; font-weight: 600; }
+      .signin p { font-size: 11px; color: var(--muted); line-height: 1.4; }
+      .signin input {
+        background: var(--bg); color: var(--fg); border: 1px solid var(--border);
+        border-radius: 8px; padding: 8px 10px; font-size: 12px; font-family: inherit;
+      }
+      .signin input:focus { outline: none; border-color: var(--primary); }
+      .signin .row { display: flex; gap: 8px; }
+      .signin .row .btn { padding: 8px; font-size: 12px; }
+      .signin .err {
+        color: var(--danger); font-size: 11px; min-height: 14px;
+      }
+      .signin .web-link {
+        text-align: center; font-size: 11px; color: var(--muted);
+      }
+      .signin .web-link a { color: var(--primary); text-decoration: none; }
+      .signin .web-link a:hover { text-decoration: underline; }
+
+      .hidden { display: none !important; }
     </style>
   </head>
   <body>
@@ -78,8 +121,30 @@
         <button class="btn" id="reset">Reset</button>
         <button class="btn" id="skip">Skip</button>
       </div>
+
+      <div class="account" id="account">
+        <span class="dot off" id="account-dot"></span>
+        <span class="email" id="account-email">Local only</span>
+        <button id="account-action">Sign in</button>
+      </div>
+
+      <div class="signin hidden" id="signin">
+        <h3>Sign in to sync</h3>
+        <p>Sign in with the same account you use on the web app to keep your timer in sync across devices.</p>
+        <input type="email" id="email" placeholder="you@example.com" autocomplete="email" />
+        <input type="password" id="password" placeholder="Password" autocomplete="current-password" />
+        <div class="row">
+          <button class="btn primary" id="signin-submit">Sign in</button>
+          <button class="btn" id="signin-signup">Create account</button>
+        </div>
+        <div class="err" id="signin-err"></div>
+        <div class="web-link">
+          Used Google? <a href="#" id="signin-web">Sign in on the web</a>
+        </div>
+      </div>
+
       <button class="open-web" id="open-web">Open full app</button>
     </div>
-    <script src="popup.js"></script>
+    <script type="module" src="popup.js"></script>
   </body>
 </html>
