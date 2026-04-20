@@ -137,6 +137,22 @@ const Index = () => {
 
   const handleMusicToggle = () => setMusicEnabled((prev) => !prev);
 
+  const handleTimerToggle = async () => {
+    const willStart = !pomodoro.isRunning;
+    if (willStart && musicEnabled && useSpotifyNow && spotify.isConnected) {
+      await spotify.primePlayback();
+    }
+    pomodoro.toggle();
+  };
+
+  const handleMusicToggle = async () => {
+    const willEnable = !musicEnabled;
+    if (willEnable && pomodoro.isRunning && useSpotifyNow && spotify.isConnected) {
+      await spotify.primePlayback();
+    }
+    setMusicEnabled((prev) => !prev);
+  };
+
   const hasAudioConfigured = !!(
     audioSettings.settings.focusMusic ||
     audioSettings.settings.breakMusic ||
@@ -183,7 +199,7 @@ const Index = () => {
         <ControlButton
           isRunning={pomodoro.isRunning}
           mode={pomodoro.mode}
-          onToggle={pomodoro.toggle}
+          onToggle={handleTimerToggle}
           onReset={pomodoro.reset}
           onSkip={pomodoro.skipToNext}
         />
