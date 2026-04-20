@@ -187,6 +187,7 @@ export function usePomodoro(settings: PomodoroSettings = DEFAULT_SETTINGS) {
     progress,
     sessionsCompleted,
     formattedTime: formatTime(timeRemaining),
+    startedAt: isRunning && runStartedAtMs !== null ? new Date(runStartedAtMs).toISOString() : null,
     start,
     pause,
     toggle,
