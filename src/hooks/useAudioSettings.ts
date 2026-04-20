@@ -7,6 +7,8 @@ export interface AudioSettings {
   longBreakMusic: AudioFile | null;
   focusMusicEnabled: boolean;
   breakChimeEnabled: boolean;
+  breakWarningEnabled: boolean;
+  breakEndChimeEnabled: boolean;
   breakMusicEnabled: boolean;
   longBreakMusicEnabled: boolean;
   volume: number; // 0 to 1
