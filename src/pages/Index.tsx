@@ -11,6 +11,9 @@ import { ControlButton } from '@/components/ControlButton';
 import { MusicToggle } from '@/components/MusicToggle';
 import { AudioSettingsModal } from '@/components/AudioSettingsModal';
 import { ModeSwitcher } from '@/components/ModeSwitcher';
+import { UserMenu } from '@/components/UserMenu';
+import { useTimerSync } from '@/hooks/useTimerSync';
+import { useAudioSettingsSync } from '@/hooks/useAudioSettingsSync';
 
 const Index = () => {
   const pomodoro = usePomodoro({
@@ -24,6 +27,10 @@ const Index = () => {
   const spotify = useSpotify();
   const [musicEnabled, setMusicEnabled] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // Cross-device sync (no-op when signed out)
+  useTimerSync(pomodoro);
+  useAudioSettingsSync(audioSettings);
 
   // A break is "long" if we're in break mode after completing a multiple of 4 focus sessions
   const isLongBreak =
@@ -173,8 +180,11 @@ const Index = () => {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="flex flex-col items-center gap-6"
+        className="relative flex w-full flex-col items-center gap-6"
       >
+        <div className="absolute right-0 top-0">
+          <UserMenu />
+        </div>
         <h1 className="sr-only">Focus Timer</h1>
         <ModeSwitcher mode={pomodoro.mode} onSwitch={pomodoro.switchMode} />
       </motion.header>

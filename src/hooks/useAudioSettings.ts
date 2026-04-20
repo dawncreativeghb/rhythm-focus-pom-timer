@@ -62,20 +62,24 @@ export function useAudioSettings() {
   const [settings, setSettings] = useState<AudioSettings>(DEFAULT_SETTINGS);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Load settings from localStorage on mount
+  // Load settings from localStorage on mount + listen for remote sync updates
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored) as Partial<AudioSettings>;
-        // Merge into defaults so newly-added fields aren't undefined for users
-        // with older saved settings.
-        setSettings({ ...DEFAULT_SETTINGS, ...parsed });
+    const load = () => {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          const parsed = JSON.parse(stored) as Partial<AudioSettings>;
+          setSettings({ ...DEFAULT_SETTINGS, ...parsed });
+        }
+      } catch (error) {
+        console.error('Failed to load audio settings:', error);
       }
-    } catch (error) {
-      console.error('Failed to load audio settings:', error);
-    }
+    };
+    load();
     setIsLoaded(true);
+    const handler = () => load();
+    window.addEventListener('audio-settings-remote-update', handler);
+    return () => window.removeEventListener('audio-settings-remote-update', handler);
   }, []);
 
   // Save settings to localStorage whenever they change
