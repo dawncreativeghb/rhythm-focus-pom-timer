@@ -138,5 +138,6 @@ export function usePomodoro(settings: PomodoroSettings = DEFAULT_SETTINGS) {
     reset,
     switchMode,
     skipToNext,
+    setTimeRemaining,
   };
 }
