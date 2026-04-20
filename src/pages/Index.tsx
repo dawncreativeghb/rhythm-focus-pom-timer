@@ -1,3 +1,4 @@
+/* @refresh reload */
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { usePomodoro } from '@/hooks/usePomodoro';
