@@ -135,18 +135,20 @@ const Index = () => {
     isLongBreak,
   ]);
 
-  const handleTimerToggle = async () => {
+  const handleTimerToggle = () => {
     const willStart = !pomodoro.isRunning;
+    // IMPORTANT: call primePlayback synchronously (no await) so the user-gesture
+    // chain stays intact for iOS Safari / Chrome autoplay policies.
     if (willStart && musicEnabled && useSpotifyNow && spotify.isConnected) {
-      await spotify.primePlayback();
+      void spotify.primePlayback();
     }
     pomodoro.toggle();
   };
 
-  const handleMusicToggle = async () => {
+  const handleMusicToggle = () => {
     const willEnable = !musicEnabled;
     if (willEnable && pomodoro.isRunning && useSpotifyNow && spotify.isConnected) {
-      await spotify.primePlayback();
+      void spotify.primePlayback();
     }
     setMusicEnabled((prev) => !prev);
   };
