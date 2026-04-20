@@ -44,8 +44,8 @@
         background:
           radial-gradient(circle at center, var(--card) 0 66%, transparent 67%),
           conic-gradient(
-            var(--ring-color) 0turn calc((1 - var(--progress)) * 1turn),
-            hsl(215 25% 22% / 0.45) calc((1 - var(--progress)) * 1turn) 1turn
+            var(--ring-color) 0turn calc(var(--progress) * 1turn),
+            hsl(215 25% 22% / 0.45) calc(var(--progress) * 1turn) 1turn
           );
         box-shadow: inset 0 0 0 1px hsl(215 25% 22% / 0.7);
         transition: box-shadow 0.3s, background 0.3s;
