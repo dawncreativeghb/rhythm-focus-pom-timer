@@ -143,6 +143,14 @@ export function useAudioSettings() {
     setSettings(prev => ({ ...prev, breakChimeEnabled: !prev.breakChimeEnabled }));
   }, []);
 
+  const toggleBreakWarning = useCallback(() => {
+    setSettings(prev => ({ ...prev, breakWarningEnabled: !prev.breakWarningEnabled }));
+  }, []);
+
+  const toggleBreakEndChime = useCallback(() => {
+    setSettings(prev => ({ ...prev, breakEndChimeEnabled: !prev.breakEndChimeEnabled }));
+  }, []);
+
   const toggleBreakMusic = useCallback(() => {
     setSettings(prev => ({ ...prev, breakMusicEnabled: !prev.breakMusicEnabled }));
   }, []);
