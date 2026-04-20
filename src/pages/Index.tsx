@@ -135,8 +135,6 @@ const Index = () => {
     isLongBreak,
   ]);
 
-  const handleMusicToggle = () => setMusicEnabled((prev) => !prev);
-
   const handleTimerToggle = async () => {
     const willStart = !pomodoro.isRunning;
     if (willStart && musicEnabled && useSpotifyNow && spotify.isConnected) {
