@@ -43,6 +43,8 @@ interface AudioSettingsModalProps {
   onSetLongBreakMusic: (file: File | null) => void;
   onToggleFocusMusic: () => void;
   onToggleBreakChime: () => void;
+  onToggleBreakWarning: () => void;
+  onToggleBreakEndChime: () => void;
   onToggleBreakMusic: () => void;
   onToggleLongBreakMusic: () => void;
   onSetVolume: (volume: number) => void;
