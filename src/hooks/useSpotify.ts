@@ -172,10 +172,6 @@ export function useSpotify() {
         setDeviceId(device_id);
         setPlayerReady(true);
         setError(null);
-
-        void (async () => {
-          await ensureActiveDevice(device_id);
-        })();
       });
 
       player.addListener('not_ready', ({ device_id }: { device_id: string }) => {
@@ -222,8 +218,11 @@ export function useSpotify() {
     return () => {
       playerRef.current?.disconnect();
       playerRef.current = null;
+      sdkLoadedRef.current = false;
+      setDeviceId(null);
+      setPlayerReady(false);
     };
-  }, [auth, ensureActiveDevice, getValidToken]);
+  }, [auth, getValidToken]);
 
   const connect = useCallback(async () => {
     setIsLoading(true);
