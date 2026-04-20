@@ -151,15 +151,24 @@ export function useSpotify() {
     })();
   }, [auth, getValidToken]);
 
+  // Keep a ref to the latest token getter so the init effect doesn't re-run
+  // every time `auth` changes (e.g. silent token refresh) and disconnect the player.
+  const getValidTokenRef = useRef(getValidToken);
   useEffect(() => {
-    if (!auth || sdkLoadedRef.current) return;
+    getValidTokenRef.current = getValidToken;
+  }, [getValidToken]);
+
+  // Re-init only when transitioning between "no auth" and "has auth", not on every auth refresh.
+  const hasAuth = !!auth;
+  useEffect(() => {
+    if (!hasAuth || sdkLoadedRef.current) return;
     sdkLoadedRef.current = true;
 
     const initPlayer = () => {
       const player = new window.Spotify.Player({
         name: 'Rhythm Focus Web Player',
         getOAuthToken: async (cb: (token: string) => void) => {
-          const token = await getValidToken();
+          const token = await getValidTokenRef.current();
           if (token) cb(token);
         },
         volume: 0.5,
@@ -222,7 +231,7 @@ export function useSpotify() {
       setDeviceId(null);
       setPlayerReady(false);
     };
-  }, [auth, getValidToken]);
+  }, [hasAuth]);
 
   const connect = useCallback(async () => {
     setIsLoading(true);
