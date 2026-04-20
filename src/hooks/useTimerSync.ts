@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { getDeviceId } from '@/lib/deviceId';
@@ -35,14 +35,40 @@ interface RemoteRow {
  * No-op when signed out (offline-first behavior preserved).
  */
 export function useTimerSync(pomodoro: PomodoroLike) {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const deviceId = useRef(getDeviceId()).current;
   const hydratedRef = useRef(false);
   const applyingRemoteRef = useRef(false);
   const pushTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  const pushSnapshot = useCallback(async () => {
+    if (!user) return;
+
+    await supabase.from('timer_state').upsert(
+      {
+        user_id: user.id,
+        mode: pomodoro.mode,
+        is_running: pomodoro.isRunning,
+        started_at: pomodoro.startedAt,
+        remaining_seconds: pomodoro.timeRemaining,
+        sessions_completed: pomodoro.sessionsCompleted,
+        device_id: deviceId,
+      },
+      { onConflict: 'user_id' }
+    );
+  }, [
+    deviceId,
+    pomodoro.isRunning,
+    pomodoro.mode,
+    pomodoro.sessionsCompleted,
+    pomodoro.startedAt,
+    pomodoro.timeRemaining,
+    user,
+  ]);
+
   // Hydrate + subscribe
   useEffect(() => {
+    if (loading) return;
     if (!user) {
       hydratedRef.current = false;
       return;
@@ -102,33 +128,38 @@ export function useTimerSync(pomodoro: PomodoroLike) {
       supabase.removeChannel(channel);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
+  }, [loading, user?.id]);
 
   // Push local changes (debounced)
   useEffect(() => {
-    if (!user || !hydratedRef.current || applyingRemoteRef.current) return;
+    if (loading || !user || !hydratedRef.current || applyingRemoteRef.current) return;
 
     if (pushTimerRef.current) clearTimeout(pushTimerRef.current);
-    pushTimerRef.current = setTimeout(async () => {
-      await supabase.from('timer_state').upsert(
-        {
-          user_id: user.id,
-          mode: pomodoro.mode,
-          is_running: pomodoro.isRunning,
-          started_at: pomodoro.startedAt,
-          remaining_seconds: pomodoro.timeRemaining,
-          sessions_completed: pomodoro.sessionsCompleted,
-          device_id: deviceId,
-        },
-        { onConflict: 'user_id' }
-      );
+    pushTimerRef.current = setTimeout(() => {
+      void pushSnapshot();
     }, 300);
 
     return () => {
       if (pushTimerRef.current) clearTimeout(pushTimerRef.current);
     };
-    // Intentionally exclude timeRemaining — we only push on state-shape changes,
-    // not every tick (that would hammer the DB).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, pomodoro.mode, pomodoro.isRunning, pomodoro.sessionsCompleted]);
+  }, [
+    loading,
+    user?.id,
+    pomodoro.mode,
+    pomodoro.isRunning,
+    pomodoro.sessionsCompleted,
+    pomodoro.startedAt,
+    pomodoro.isRunning ? null : pomodoro.timeRemaining,
+    pushSnapshot,
+  ]);
+
+  useEffect(() => {
+    if (loading || !user || !hydratedRef.current || applyingRemoteRef.current || !pomodoro.isRunning) return;
+
+    const heartbeat = window.setInterval(() => {
+      void pushSnapshot();
+    }, 15000);
+
+    return () => window.clearInterval(heartbeat);
+  }, [loading, user?.id, pomodoro.isRunning, pushSnapshot]);
 }
