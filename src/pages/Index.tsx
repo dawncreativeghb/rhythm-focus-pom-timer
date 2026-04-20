@@ -219,6 +219,8 @@ const Index = () => {
         onSetLongBreakMusic={audioSettings.setLongBreakMusic}
         onToggleFocusMusic={audioSettings.toggleFocusMusic}
         onToggleBreakChime={audioSettings.toggleBreakChime}
+        onToggleBreakWarning={audioSettings.toggleBreakWarning}
+        onToggleBreakEndChime={audioSettings.toggleBreakEndChime}
         onToggleBreakMusic={audioSettings.toggleBreakMusic}
         onToggleLongBreakMusic={audioSettings.toggleLongBreakMusic}
         onSetVolume={audioSettings.setVolume}
