@@ -8,6 +8,12 @@
     "https://yuwkjkyzzlcgsqojizfl.supabase.co/*",
     "wss://yuwkjkyzzlcgsqojizfl.supabase.co/*"
   ],
+  "externally_connectable": {
+    "matches": [
+      "https://rhythm-focus-pom-timer.lovable.app/*",
+      "https://id-preview--37956388-6962-4650-a7e8-68f572004607.lovable.app/*"
+    ]
+  },
   "action": {
     "default_popup": "popup.html",
     "default_icon": {

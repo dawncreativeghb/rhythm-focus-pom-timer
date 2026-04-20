@@ -13,6 +13,7 @@ import {
 } from './sync.js';
 
 const WEB_APP_URL = 'https://rhythm-focus-pom-timer.lovable.app';
+const EXTENSION_AUTH_URL = `${WEB_APP_URL}/extension-auth?extensionId=${chrome.runtime.id}`;
 
 const $ = (id) => document.getElementById(id);
 const timeEl = $('time');

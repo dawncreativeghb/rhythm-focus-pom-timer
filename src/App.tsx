@@ -10,6 +10,7 @@ import InstallExtension from "./pages/InstallExtension";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Support from "./pages/Support";
 import Auth from "./pages/Auth";
+import ExtensionAuth from "./pages/ExtensionAuth";
 import { AuthProvider } from "./hooks/useAuth";
 
 const queryClient = new QueryClient();
@@ -24,6 +25,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/extension-auth" element={<ExtensionAuth />} />
             <Route path="/spotify-callback" element={<SpotifyCallback />} />
             <Route path="/install-extension" element={<InstallExtension />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
