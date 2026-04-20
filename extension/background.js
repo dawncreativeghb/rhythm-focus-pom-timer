@@ -163,7 +163,11 @@ async function applyExternalSession(session) {
   lastKnownState = normalizeState(await getLocalState());
   await setupRealtime();
   await rescheduleAlarm();
-  await chrome.runtime.sendMessage({ type: 'extension-auth-updated' });
+  try {
+    await chrome.runtime.sendMessage({ type: 'extension-auth-updated' });
+  } catch {
+    /* ignore */
+  }
   return { ok: true };
 }
 
