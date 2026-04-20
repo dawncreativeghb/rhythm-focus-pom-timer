@@ -13,7 +13,9 @@ export function TimerRing({ progress, mode, isRunning, formattedTime }: TimerRin
   const strokeWidth = 6;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference * (1 - progress);
+  // Ring starts full and shrinks counterclockwise as progress (0→1) advances.
+  // Negative offset rotates the dash gap counterclockwise from the start point.
+  const strokeDashoffset = -circumference * progress;
 
   return (
     <div className="relative flex items-center justify-center">
@@ -39,7 +41,7 @@ export function TimerRing({ progress, mode, isRunning, formattedTime }: TimerRin
       <svg
         width={size}
         height={size}
-        className="rotate-90 -scale-x-100"
+        className="-rotate-90"
         aria-hidden="true"
       >
         <circle
