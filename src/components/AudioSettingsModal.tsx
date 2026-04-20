@@ -145,6 +145,8 @@ export function AudioSettingsModal({
   onSetLongBreakMusic,
   onToggleFocusMusic,
   onToggleBreakChime,
+  onToggleBreakWarning,
+  onToggleBreakEndChime,
   onToggleBreakMusic,
   onToggleLongBreakMusic,
   onSetVolume,
