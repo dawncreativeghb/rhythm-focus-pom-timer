@@ -4,9 +4,11 @@ export interface AudioSettings {
   focusMusic: AudioFile | null;
   breakChime: AudioFile | null;
   breakMusic: AudioFile | null;
+  longBreakMusic: AudioFile | null;
   focusMusicEnabled: boolean;
   breakChimeEnabled: boolean;
   breakMusicEnabled: boolean;
+  longBreakMusicEnabled: boolean;
   volume: number; // 0 to 1
   spotifyFocusUri: string;
   spotifyBreakUri: string;
