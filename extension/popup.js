@@ -119,6 +119,20 @@ async function notifyBackground(message) {
   }
 }
 
+async function syncBackgroundAuthSession() {
+  const { data } = await supabase.auth.getSession();
+  const session = data?.session;
+  await notifyBackground({
+    type: 'auth-session',
+    session: session
+      ? {
+          access_token: session.access_token,
+          refresh_token: session.refresh_token,
+        }
+      : null,
+  });
+}
+
 async function applyState(next) {
   popupState = normalizeState(next);
   await setLocalState(popupState);
@@ -388,6 +402,7 @@ function wireSpotify() {
     renderAccount();
 
     if (currentUser) {
+      await syncBackgroundAuthSession();
       await hydrateFromCloud();
       await audioUi.hydrateSignedIn();
       await renderSpotify();
@@ -407,6 +422,7 @@ function wireSpotify() {
 supabase.auth.onAuthStateChange(async (_event, session) => {
   currentUser = session?.user ?? null;
   renderAccount();
+  await syncBackgroundAuthSession();
   if (currentUser) {
     await hydrateFromCloud();
     await audioUi?.hydrateSignedIn();

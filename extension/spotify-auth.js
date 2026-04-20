@@ -2,6 +2,15 @@ import { supabase } from './sync.js';
 
 const STORAGE_KEY = 'spotifyAuth';
 const REFRESH_BUFFER_MS = 60_000;
+const SPOTIFY_CLIENT_ID = '980fe05b9d3d4d49b5f703a9e05252ea';
+const SPOTIFY_SCOPES = [
+  'streaming',
+  'user-read-email',
+  'user-read-private',
+  'user-read-playback-state',
+  'user-modify-playback-state',
+  'user-read-currently-playing',
+].join(' ');
 
 export function getSpotifyRedirectUri() {
   // chrome.identity gives us a stable https://<extension-id>.chromiumapp.org/* URL
@@ -11,20 +20,19 @@ export function getSpotifyRedirectUri() {
 
 export async function connectSpotifyViaIdentity() {
   const redirectUri = getSpotifyRedirectUri();
-
-  const { data: loginData, error: loginError } = await supabase.functions.invoke('spotify-auth', {
-    body: { action: 'login', redirect_uri: redirectUri },
-  });
-
-  if (loginError || !loginData?.url) {
-    return { ok: false, error: loginError?.message || loginData?.error || 'Failed to start Spotify login.' };
-  }
+  const authUrl = new URL('https://accounts.spotify.com/authorize');
+  authUrl.searchParams.set('response_type', 'code');
+  authUrl.searchParams.set('client_id', SPOTIFY_CLIENT_ID);
+  authUrl.searchParams.set('scope', SPOTIFY_SCOPES);
+  authUrl.searchParams.set('redirect_uri', redirectUri);
+  authUrl.searchParams.set('state', crypto.randomUUID());
+  authUrl.searchParams.set('show_dialog', 'true');
 
   let redirectResponseUrl;
   try {
     redirectResponseUrl = await new Promise((resolve, reject) => {
       chrome.identity.launchWebAuthFlow(
-        { url: loginData.url, interactive: true },
+        { url: authUrl.toString(), interactive: true },
         (responseUrl) => {
           if (chrome.runtime.lastError) return reject(new Error(chrome.runtime.lastError.message));
           if (!responseUrl) return reject(new Error('Spotify sign-in was cancelled.'));
