@@ -15,6 +15,44 @@ let pendingLoginUrl = null;
 let cachedLoginUrl = null;
 let cachedLoginRedirectUri = null;
 
+// supabase.functions.invoke returns FunctionsHttpError for non-2xx responses
+// and stuffs the actual Response in error.context. Without unpacking it the
+// popup only sees "Edge Function returned a non-2xx status code", which hides
+// the real Spotify error message. This helper unwraps both cases into a flat
+// { data, error } shape.
+async function callSpotifyAuthFn(body) {
+  try {
+    const { data, error } = await supabase.functions.invoke('spotify-auth', { body });
+    if (!error) return { data, error: null };
+
+    let detail = error.message;
+    const ctx = error.context;
+    if (ctx && typeof ctx.text === 'function') {
+      try {
+        const text = await ctx.clone().text();
+        if (text) {
+          try {
+            const parsed = JSON.parse(text);
+            detail =
+              parsed?.error_description ||
+              parsed?.error?.message ||
+              parsed?.error ||
+              parsed?.message ||
+              text;
+          } catch {
+            detail = text;
+          }
+        }
+      } catch {
+        /* ignore body read errors */
+      }
+    }
+    return { data: null, error: new Error(detail || 'Spotify auth request failed.') };
+  } catch (err) {
+    return { data: null, error: err instanceof Error ? err : new Error('Spotify auth request failed.') };
+  }
+}
+
 export function getSpotifyRedirectUri() {
   // chrome.identity gives us a stable https://<extension-id>.chromiumapp.org/* URL
   // that Spotify will accept as a redirect URI (must be added in the Spotify dashboard).
@@ -31,14 +69,10 @@ async function getSpotifyLoginUrl(redirectUri) {
   }
 
   cachedLoginRedirectUri = redirectUri;
-  pendingLoginUrl = supabase.functions
-    .invoke('spotify-auth', {
-      body: { action: 'login', redirect_uri: redirectUri },
-    })
+  pendingLoginUrl = callSpotifyAuthFn({ action: 'login', redirect_uri: redirectUri })
     .then(({ data, error }) => {
-      if (error || !data?.url) {
-        throw new Error(error?.message || data?.error || 'Spotify login setup failed.');
-      }
+      if (error) throw error;
+      if (!data?.url) throw new Error('Spotify login setup failed: no URL returned.');
 
       const url = new URL(data.url);
       url.searchParams.set('scope', SPOTIFY_SCOPES);
@@ -88,21 +122,27 @@ export async function connectSpotifyViaIdentity() {
     const url = new URL(redirectResponseUrl);
     code = url.searchParams.get('code');
     const errParam = url.searchParams.get('error');
-    if (errParam) return { ok: false, error: errParam };
+    const errDesc = url.searchParams.get('error_description');
+    if (errParam) return { ok: false, error: errDesc ? `${errParam}: ${errDesc}` : errParam };
   } catch {
     return { ok: false, error: 'Could not parse Spotify response.' };
   }
 
   if (!code) return { ok: false, error: 'Spotify did not return an authorization code.' };
 
-  const { data: exchangeData, error: exchangeError } = await supabase.functions.invoke('spotify-auth', {
-    body: { action: 'exchange', code, redirect_uri: redirectUri },
+  const { data: exchangeData, error: exchangeError } = await callSpotifyAuthFn({
+    action: 'exchange',
+    code,
+    redirect_uri: redirectUri,
   });
 
-  if (exchangeError || !exchangeData?.access_token || !exchangeData?.refresh_token) {
+  if (exchangeError) {
+    return { ok: false, error: exchangeError.message };
+  }
+  if (!exchangeData?.access_token || !exchangeData?.refresh_token) {
     return {
       ok: false,
-      error: exchangeError?.message || exchangeData?.error || 'Spotify token exchange failed.',
+      error: exchangeData?.error || 'Spotify token exchange returned no tokens.',
     };
   }
 
@@ -162,8 +202,9 @@ export async function getValidSpotifyToken() {
     return current.access_token;
   }
 
-  const { data, error } = await supabase.functions.invoke('spotify-auth', {
-    body: { action: 'refresh', refresh_token: current.refresh_token },
+  const { data, error } = await callSpotifyAuthFn({
+    action: 'refresh',
+    refresh_token: current.refresh_token,
   });
 
   if (error || !data?.access_token) {
