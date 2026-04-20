@@ -40,9 +40,11 @@ interface AudioSettingsModalProps {
   onSetFocusMusic: (file: File | null) => void;
   onSetBreakChime: (file: File | null) => void;
   onSetBreakMusic: (file: File | null) => void;
+  onSetLongBreakMusic: (file: File | null) => void;
   onToggleFocusMusic: () => void;
   onToggleBreakChime: () => void;
   onToggleBreakMusic: () => void;
+  onToggleLongBreakMusic: () => void;
   onSetVolume: (volume: number) => void;
   onSetSpotifyFocusUri: (uri: string) => void;
   onSetSpotifyBreakUri: (uri: string) => void;
