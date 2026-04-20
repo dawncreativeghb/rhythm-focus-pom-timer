@@ -3,6 +3,71 @@ import { supabase } from './sync.js';
 const STORAGE_KEY = 'spotifyAuth';
 const REFRESH_BUFFER_MS = 60_000;
 
+export function getSpotifyRedirectUri() {
+  // chrome.identity gives us a stable https://<extension-id>.chromiumapp.org/* URL
+  // that Spotify will accept as a redirect URI (must be added in the Spotify dashboard).
+  return chrome.identity.getRedirectURL('spotify');
+}
+
+export async function connectSpotifyViaIdentity() {
+  const redirectUri = getSpotifyRedirectUri();
+
+  const { data: loginData, error: loginError } = await supabase.functions.invoke('spotify-auth', {
+    body: { action: 'login', redirect_uri: redirectUri },
+  });
+
+  if (loginError || !loginData?.url) {
+    return { ok: false, error: loginError?.message || loginData?.error || 'Failed to start Spotify login.' };
+  }
+
+  let redirectResponseUrl;
+  try {
+    redirectResponseUrl = await new Promise((resolve, reject) => {
+      chrome.identity.launchWebAuthFlow(
+        { url: loginData.url, interactive: true },
+        (responseUrl) => {
+          if (chrome.runtime.lastError) return reject(new Error(chrome.runtime.lastError.message));
+          if (!responseUrl) return reject(new Error('Spotify sign-in was cancelled.'));
+          resolve(responseUrl);
+        }
+      );
+    });
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : 'Spotify sign-in failed.' };
+  }
+
+  let code;
+  try {
+    const url = new URL(redirectResponseUrl);
+    code = url.searchParams.get('code');
+    const errParam = url.searchParams.get('error');
+    if (errParam) return { ok: false, error: errParam };
+  } catch {
+    return { ok: false, error: 'Could not parse Spotify response.' };
+  }
+
+  if (!code) return { ok: false, error: 'Spotify did not return an authorization code.' };
+
+  const { data: exchangeData, error: exchangeError } = await supabase.functions.invoke('spotify-auth', {
+    body: { action: 'exchange', code, redirect_uri: redirectUri },
+  });
+
+  if (exchangeError || !exchangeData?.access_token || !exchangeData?.refresh_token) {
+    return {
+      ok: false,
+      error: exchangeError?.message || exchangeData?.error || 'Spotify token exchange failed.',
+    };
+  }
+
+  await setSpotifyAuth({
+    access_token: exchangeData.access_token,
+    refresh_token: exchangeData.refresh_token,
+    expires_at: Date.now() + Number(exchangeData.expires_in ?? 3600) * 1000,
+  });
+
+  return { ok: true };
+}
+
 function normalizeAuth(auth) {
   if (!auth?.access_token || !auth?.refresh_token) return null;
   const expiresAt = Number(auth.expires_at ?? 0);

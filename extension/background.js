@@ -9,6 +9,7 @@ import {
   getDeviceId,
 } from './sync.js';
 import { getAudioSettings, hydrateAudioSettingsFromCloud } from './audio-settings.js';
+import { playSpotifyUri, pauseSpotifyPlayback, getSpotifyAuth } from './spotify-auth.js';
 
 const ALARM_NAME = 'pomodoro-end';
 const LONG_BREAK_INTERVAL = 4;
@@ -72,6 +73,29 @@ async function sendAudioMessage(message) {
   }
 }
 
+async function maybePlaySpotifyForMode(settings, mode, isLong) {
+  const auth = await getSpotifyAuth();
+  if (!auth) return false;
+
+  let useFlag, uri;
+  if (mode === 'focus') {
+    useFlag = settings?.useSpotifyForFocus;
+    uri = settings?.spotifyFocusUri;
+  } else if (isLong) {
+    useFlag = settings?.useSpotifyForLongBreak;
+    uri = settings?.spotifyLongBreakUri;
+  } else {
+    useFlag = settings?.useSpotifyForBreak;
+    uri = settings?.spotifyBreakUri;
+  }
+
+  if (!useFlag || !uri) return false;
+
+  const result = await playSpotifyUri(uri);
+  if (!result.ok) console.warn('[spotify] playback failed:', result.error);
+  return result.ok;
+}
+
 async function syncAudioForState(next, prev) {
   const normalizedNext = normalizeState(next);
   const normalizedPrev = prev ? normalizeState(prev) : null;
@@ -79,6 +103,7 @@ async function syncAudioForState(next, prev) {
 
   if (!normalizedNext.isRunning) {
     await sendAudioMessage({ type: 'audio-stop' });
+    await pauseSpotifyPlayback().catch(() => {});
     return;
   }
 
@@ -86,12 +111,26 @@ async function syncAudioForState(next, prev) {
   const restarted = !normalizedPrev?.isRunning || normalizedPrev?.startedAt !== normalizedNext.startedAt;
   if (!modeChanged && !restarted) return;
 
+  const longBreak = isLongBreak(normalizedNext);
+  const spotifyHandled = await maybePlaySpotifyForMode(settings, normalizedNext.mode, longBreak);
+
   if (normalizedNext.mode === 'break') {
-    await sendAudioMessage({
-      type: 'audio-play-break',
-      settings,
-      isLongBreak: isLongBreak(normalizedNext),
-    });
+    if (spotifyHandled) {
+      await sendAudioMessage({ type: 'audio-play-end', settings });
+    } else {
+      await sendAudioMessage({
+        type: 'audio-play-break',
+        settings,
+        isLongBreak: longBreak,
+      });
+    }
+    return;
+  }
+
+  if (spotifyHandled) {
+    if (normalizedPrev?.mode === 'break') {
+      await sendAudioMessage({ type: 'audio-play-end', settings });
+    }
     return;
   }
 
