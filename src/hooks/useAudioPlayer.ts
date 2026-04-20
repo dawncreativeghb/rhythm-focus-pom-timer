@@ -1,20 +1,29 @@
 import { useRef, useCallback, useEffect } from 'react';
 import type { AudioSettings } from './useAudioSettings';
 import type { TimerMode } from './usePomodoro';
+import { playStartChime, playWarningChime, playEndChime } from '@/lib/defaultChimes';
 
 interface UseAudioPlayerOptions {
   settings: AudioSettings;
   mode: TimerMode;
   isRunning: boolean;
   isLongBreak?: boolean;
+  timeRemaining?: number; // seconds, used for 1-minute warning
 }
 
-export function useAudioPlayer({ settings, mode, isRunning, isLongBreak = false }: UseAudioPlayerOptions) {
+export function useAudioPlayer({
+  settings,
+  mode,
+  isRunning,
+  isLongBreak = false,
+  timeRemaining = 0,
+}: UseAudioPlayerOptions) {
   const focusAudioRef = useRef<HTMLAudioElement | null>(null);
   const breakAudioRef = useRef<HTMLAudioElement | null>(null);
   const longBreakAudioRef = useRef<HTMLAudioElement | null>(null);
   const chimeAudioRef = useRef<HTMLAudioElement | null>(null);
   const previousModeRef = useRef<TimerMode>(mode);
+  const warningFiredForBreakRef = useRef(false);
 
   // Create or update audio elements when settings change
   useEffect(() => {
