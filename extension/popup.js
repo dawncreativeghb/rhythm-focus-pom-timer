@@ -13,6 +13,7 @@ import {
   clearSpotifyAuth,
   getSpotifyProfile,
   connectSpotifyViaIdentity,
+  primeSpotifyLogin,
 } from './spotify-auth.js';
 import {
   getAudioSettings,
@@ -299,8 +300,6 @@ async function renderSpotify() {
   const connectBtn = $('spotify-connect');
   const disconnectBtn = $('spotify-disconnect');
 
-  if (errEl) errEl.textContent = '';
-
   for (const field of SPOTIFY_FIELDS) {
     const uriInput = $(field.uriId);
     const toggle = $(field.toggleId);
@@ -394,6 +393,9 @@ function wireSpotify() {
   });
   wireSpotify();
   await renderSpotify();
+  void primeSpotifyLogin().catch((error) => {
+    console.warn('[spotify] preflight failed', error);
+  });
 
   try {
     deviceId = await getDeviceId();

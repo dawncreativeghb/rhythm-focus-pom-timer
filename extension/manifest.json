@@ -1,5 +1,6 @@
 {
   "manifest_version": 3,
+  "key": "MFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAJVWro1W2fv4P3NQv3mM0VL3fWSDkE9WJ7TJTPAo9xgcRyBq0ZX9z+qfKk/4vypQ/c2CP4kLQwKPAkq6H6pqjokCAwEAAQ==",
   "name": "Rhythm Focus — Pomodoro",
   "version": "1.3.1",
   "description": "Minimalist Pomodoro timer with audio + Spotify playlists for focus and break sessions. Optional sign-in syncs with the web app.",
