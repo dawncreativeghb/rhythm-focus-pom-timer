@@ -293,10 +293,7 @@ export function useSpotify() {
       const token = await getValidToken();
       if (!token) return;
 
-      const activateAndPlay = async () => {
-        await ensureActiveDevice(deviceId);
-        await new Promise((resolve) => setTimeout(resolve, 300));
-
+      const buildBody = () => {
         const body: any = {};
         if (contextUri) {
           if (contextUri.includes(':track:')) {
@@ -311,58 +308,63 @@ export function useSpotify() {
             body.position_ms = options.positionMs;
           }
         }
+        return body;
+      };
 
-        console.log('[Spotify] play', { contextUri, body, deviceId });
-        return fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
+      const callPlay = async () =>
+        fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
           method: 'PUT',
           headers: {
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(body),
+          body: JSON.stringify(buildBody()),
         });
-      };
 
       try {
-        let res = await activateAndPlay();
+        // 1. Activate the audio element (needed on mobile / iOS)
+        try {
+          await playerRef.current?.activateElement?.();
+        } catch (e) {
+          console.warn('[Spotify] activateElement failed', e);
+        }
+
+        // 2. Transfer playback to our web player and give Spotify time to register it
+        await ensureActiveDevice(deviceId);
+        await new Promise((r) => setTimeout(r, 800));
+
+        // 3. Try play, with up to 3 retries on the "device not found" error
+        let res = await callPlay();
+        let attempt = 0;
+        while ((!res.ok && res.status === 404) && attempt < 3) {
+          attempt++;
+          console.warn(`[Spotify] device not ready, retry ${attempt}/3`);
+          await ensureActiveDevice(deviceId);
+          await new Promise((r) => setTimeout(r, 700 * attempt));
+          res = await callPlay();
+        }
 
         if (!res.ok && res.status !== 204) {
           const text = await res.text();
-          console.error('[Spotify] play failed', res.status, text);
           let parsed: any = null;
           try {
             parsed = JSON.parse(text);
           } catch {}
           const message = parsed?.error?.message as string | undefined;
+          console.error('[Spotify] play failed', res.status, text);
 
-          if (res.status === 404 && message?.toLowerCase().includes('device')) {
-            await ensureActiveDevice(deviceId);
-            await new Promise((resolve) => setTimeout(resolve, 500));
-            res = await activateAndPlay();
-          }
-
-          if (!res.ok && res.status !== 204) {
-            const retryText = await res.text();
-            console.error('[Spotify] play retry failed', res.status, retryText);
-            let retryParsed: any = null;
-            try {
-              retryParsed = JSON.parse(retryText);
-            } catch {}
-            const retryMessage = retryParsed?.error?.message as string | undefined;
-
-            if (res.status === 403) {
-              setError('Spotify Premium required for playback');
-            } else if (res.status === 404 && retryMessage?.toLowerCase().includes('device')) {
-              setError('Spotify web player not ready yet — open Spotify, then reconnect and try again');
-            } else if (res.status === 404) {
-              setError('Playlist not found — make sure the link is correct and set to public');
-            } else if (res.status === 401) {
-              setError('Spotify session expired — please reconnect');
-            } else {
-              setError(`Spotify error (${res.status}): ${retryMessage || 'unknown'}`);
-            }
+          if (res.status === 403) {
+            setError('Spotify Premium required for playback');
+          } else if (res.status === 404 && message?.toLowerCase().includes('device')) {
+            setError(
+              'Spotify can\'t find this web player. Open the Spotify app once (desktop or phone), play any song for a second, then come back here.'
+            );
+          } else if (res.status === 404) {
+            setError('Playlist not found — check the link is correct and public');
+          } else if (res.status === 401) {
+            setError('Spotify session expired — please reconnect');
           } else {
-            setError(null);
+            setError(`Spotify error (${res.status}): ${message || 'unknown'}`);
           }
         } else {
           setError(null);
