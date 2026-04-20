@@ -1,15 +1,23 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" stroke="#2DD4BF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
-  <!-- Timer ring with gap in top-left quarter (270° arc from 12 o'clock around to 9 o'clock) -->
-  <path d="M 32 8 A 24 24 0 1 1 8 32" />
-  <!-- Tick marks INSIDE the ring, well separated -->
-  <line x1="44.5" y1="13.7" x2="43.2" y2="16"/>
-  <line x1="50.3" y1="19.5" x2="48" y2="20.8"/>
-  <line x1="52" y1="32" x2="49.4" y2="32"/>
-  <line x1="50.3" y1="44.5" x2="48" y2="43.2"/>
-  <line x1="44.5" y1="50.3" x2="43.2" y2="48"/>
-  <line x1="32" y1="52" x2="32" y2="49.4"/>
-  <line x1="19.5" y1="50.3" x2="20.8" y2="48"/>
-  <line x1="13.7" y1="44.5" x2="16" y2="43.2"/>
-  <!-- Play triangle (filled) -->
-  <path d="M 26 23 L 26 41 L 42 32 Z" fill="#2DD4BF" stroke="none"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" stroke="#2DD4BF" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Timer ring with ~270° arc, gap in top-left quarter -->
+  <path d="M 32 8 A 24 24 0 1 1 8 32" stroke-width="4"/>
+  <!-- Tick marks INSIDE ring (radii 18 to 20.5), positioned at clock hours 1,2,3,4,5,6,7,8 -->
+  <!-- 1 o'clock (30°): inner=(41,16.4) outer=(43.25,15.1) -->
+  <line x1="41" y1="16.4" x2="43.25" y2="15.1" stroke-width="2"/>
+  <!-- 2 o'clock (60°): inner=(47.6,23) outer=(49.75,24.25) -->
+  <line x1="47.6" y1="23" x2="49.75" y2="24.25" stroke-width="2"/>
+  <!-- 3 o'clock (90°): inner=(50,32) outer=(52.5,32) -->
+  <line x1="50" y1="32" x2="52.5" y2="32" stroke-width="2"/>
+  <!-- 4 o'clock (120°): inner=(47.6,41) outer=(49.75,39.75) -->
+  <line x1="47.6" y1="41" x2="49.75" y2="39.75" stroke-width="2"/>
+  <!-- 5 o'clock (150°): inner=(41,47.6) outer=(43.25,48.9) -->
+  <line x1="41" y1="47.6" x2="43.25" y2="48.9" stroke-width="2"/>
+  <!-- 6 o'clock (180°): inner=(32,50) outer=(32,52.5) -->
+  <line x1="32" y1="50" x2="32" y2="52.5" stroke-width="2"/>
+  <!-- 7 o'clock (210°): inner=(23,47.6) outer=(20.75,48.9) -->
+  <line x1="23" y1="47.6" x2="20.75" y2="48.9" stroke-width="2"/>
+  <!-- 8 o'clock (240°): inner=(16.4,41) outer=(14.25,39.75) -->
+  <line x1="16.4" y1="41" x2="14.25" y2="39.75" stroke-width="2"/>
+  <!-- Play triangle -->
+  <path d="M 27 24 L 27 40 L 41 32 Z" fill="#2DD4BF" stroke="none"/>
 </svg>
