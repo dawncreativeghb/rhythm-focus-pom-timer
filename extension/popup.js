@@ -114,9 +114,14 @@ function renderAccount() {
 
 async function notifyBackground(message) {
   try {
-    await chrome.runtime.sendMessage(message);
-  } catch {
-    /* ignore */
+    const response = await chrome.runtime.sendMessage(message);
+    if (response?.ok === false) {
+      throw new Error(response.error || 'Background sync failed.');
+    }
+    return response;
+  } catch (error) {
+    console.warn('[popup] background message failed', message?.type, error);
+    return { ok: false, error: error instanceof Error ? error.message : 'Background message failed.' };
   }
 }
 
@@ -138,7 +143,12 @@ async function applyState(next) {
   popupState = normalizeState(next);
   await setLocalState(popupState);
   render(popupState);
-  await notifyBackground({ type: 'state-changed', state: popupState });
+   const backgroundResult = await notifyBackground({ type: 'state-changed', state: popupState });
+   if (backgroundResult?.ok === false) {
+    popupState = normalizeState(await getLocalState());
+    render(popupState);
+    return;
+   }
   if (currentUser) void pushState(popupState);
 }
 
@@ -316,6 +326,7 @@ async function renderSpotify() {
   if (!auth) {
     if (statusEl) statusEl.textContent = 'Not connected';
     if (metaEl) metaEl.textContent = 'Use your Spotify playlists for focus and break sessions.';
+    if (errEl) errEl.textContent = '';
     connectBtn?.classList.remove('hidden');
     disconnectBtn?.classList.add('hidden');
     return;
@@ -355,8 +366,10 @@ function wireSpotify() {
     if (!result.ok) {
       console.warn('[spotify] connect failed', result.error);
       if (errEl) errEl.textContent = result.error || 'Spotify connection failed.';
+    } else if (errEl) {
+      errEl.textContent = '';
     }
-    await renderSpotify();
+    if (result.ok) await renderSpotify();
   });
 
   disconnectBtn?.addEventListener('click', async () => {
