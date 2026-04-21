@@ -18,6 +18,7 @@ interface PomodoroLike {
     remainingSeconds: number;
     sessionsCompleted: number;
     startedAt: string | null;
+    anchorAt?: string | null;
   }) => void;
 }
 
@@ -28,6 +29,7 @@ interface RemoteRow {
   remaining_seconds: number;
   sessions_completed: number;
   device_id: string | null;
+  updated_at: string;
 }
 
 /**
@@ -99,6 +101,7 @@ export function useTimerSync(pomodoro: PomodoroLike) {
         remainingSeconds: row.remaining_seconds,
         sessionsCompleted: row.sessions_completed,
         startedAt: row.started_at,
+        anchorAt: row.updated_at,
       });
 
       setTimeout(() => {

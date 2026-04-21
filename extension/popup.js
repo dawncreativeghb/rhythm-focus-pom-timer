@@ -64,6 +64,7 @@ function normalizeState(state) {
   const total = durationFor(seeded);
   const remaining = Number.isFinite(Number(state?.remaining)) ? Math.max(0, Number(state.remaining)) : total;
   const startedAt = state?.startedAt ? Number(state.startedAt) : null;
+   const updatedAt = Number.isFinite(Number(state?.updatedAt)) ? Number(state.updatedAt) : startedAt ?? Date.now();
   const isRunning = Boolean(state?.isRunning) && Boolean(startedAt);
 
   return {
@@ -72,14 +73,16 @@ function normalizeState(state) {
     remaining,
     startedAt: isRunning ? startedAt : null,
     sessionsCompleted,
+    updatedAt,
   };
 }
 
 function computeRemaining(state) {
   const total = durationFor(state);
   const stored = Math.max(0, Number(state?.remaining ?? total));
-  if (!state?.isRunning || !state?.startedAt) return stored || total;
-  const elapsed = Math.max(0, Math.floor((Date.now() - Number(state.startedAt)) / 1000));
+  if (!state?.isRunning) return stored || total;
+  const anchorAt = Number(state?.updatedAt ?? state?.startedAt ?? Date.now());
+  const elapsed = Math.max(0, Math.floor((Date.now() - anchorAt) / 1000));
   return Math.max(0, stored - elapsed);
 }
 
@@ -159,18 +162,19 @@ function getWorkingState() {
 toggleBtn.addEventListener('click', async () => {
   const s = getWorkingState();
   if (s.isRunning) {
-    await applyState({ ...s, isRunning: false, remaining: computeRemaining(s), startedAt: null });
+    await applyState({ ...s, isRunning: false, remaining: computeRemaining(s), startedAt: null, updatedAt: Date.now() });
     return;
   }
 
   const total = durationFor(s);
   const remaining = computeRemaining(s) > 0 ? computeRemaining(s) : total;
-  await applyState({ ...s, isRunning: true, remaining, startedAt: Date.now() });
+  const now = Date.now();
+  await applyState({ ...s, isRunning: true, remaining, startedAt: now, updatedAt: now });
 });
 
 resetBtn.addEventListener('click', async () => {
   const s = getWorkingState();
-  await applyState({ ...s, isRunning: false, remaining: durationFor(s), startedAt: null });
+  await applyState({ ...s, isRunning: false, remaining: durationFor(s), startedAt: null, updatedAt: Date.now() });
 });
 
 skipBtn.addEventListener('click', async () => {
@@ -183,6 +187,7 @@ skipBtn.addEventListener('click', async () => {
     sessionsCompleted: nextSessions,
     remaining: durationFor({ mode: nextMode, sessionsCompleted: nextSessions }),
     startedAt: null,
+    updatedAt: Date.now(),
   });
   await applyState(next);
 });
@@ -198,6 +203,7 @@ modeBtns.forEach((b) => {
       isRunning: false,
       startedAt: null,
       remaining: durationFor({ mode, sessionsCompleted: s.sessionsCompleted }),
+      updatedAt: Date.now(),
     });
     await applyState(next);
   });

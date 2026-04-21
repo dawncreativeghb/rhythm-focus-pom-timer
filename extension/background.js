@@ -29,12 +29,14 @@ function normalizeState(state) {
   const total = durationFor({ mode, sessionsCompleted });
   const remaining = Number.isFinite(Number(state?.remaining)) ? Math.max(0, Number(state.remaining)) : total;
   const startedAt = state?.startedAt ? Number(state.startedAt) : null;
+  const updatedAt = Number.isFinite(Number(state?.updatedAt)) ? Number(state.updatedAt) : startedAt ?? Date.now();
   return {
     mode,
     sessionsCompleted,
     remaining,
     isRunning: Boolean(state?.isRunning) && Boolean(startedAt),
     startedAt: startedAt || null,
+    updatedAt,
   };
 }
 
@@ -145,7 +147,7 @@ async function rescheduleAlarm() {
   await chrome.alarms.clear(ALARM_NAME);
   const s = normalizeState(await getLocalState());
   if (!s.isRunning || !s.startedAt) return;
-  const elapsedMs = Date.now() - s.startedAt;
+  const elapsedMs = Date.now() - Number(s.updatedAt ?? s.startedAt);
   const totalMs = s.remaining * 1000;
   const remainingMs = Math.max(1000, totalMs - elapsedMs);
   chrome.alarms.create(ALARM_NAME, { when: Date.now() + remainingMs });
@@ -294,6 +296,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     sessionsCompleted: nextSessions,
     startedAt: Date.now(),
     remaining: durationFor({ mode: nextMode, sessionsCompleted: nextSessions }),
+    updatedAt: Date.now(),
   });
 
   await setLocalState(next);

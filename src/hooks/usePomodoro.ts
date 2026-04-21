@@ -22,6 +22,7 @@ interface SyncPayload {
   remainingSeconds: number;
   sessionsCompleted: number;
   startedAt: string | null;
+  anchorAt?: string | null;
 }
 
 export function usePomodoro(settings: PomodoroSettings = DEFAULT_SETTINGS) {
@@ -29,7 +30,8 @@ export function usePomodoro(settings: PomodoroSettings = DEFAULT_SETTINGS) {
   const [storedRemaining, setStoredRemaining] = useState(settings.focusDuration * 60);
   const [isRunning, setIsRunning] = useState(false);
   const [sessionsCompleted, setSessionsCompleted] = useState(0);
-  const [runStartedAtMs, setRunStartedAtMs] = useState<number | null>(null);
+  const [sessionStartedAtMs, setSessionStartedAtMs] = useState<number | null>(null);
+  const [runAnchorAtMs, setRunAnchorAtMs] = useState<number | null>(null);
   const [nowMs, setNowMs] = useState(Date.now());
 
   const getBreakDurationForSessions = useCallback(
@@ -44,7 +46,7 @@ export function usePomodoro(settings: PomodoroSettings = DEFAULT_SETTINGS) {
     mode === 'focus' ? settings.focusDuration * 60 : getBreakDurationForSessions(sessionsCompleted) * 60;
 
   const elapsedSeconds =
-    isRunning && runStartedAtMs !== null ? Math.max(0, Math.floor((nowMs - runStartedAtMs) / 1000)) : 0;
+    isRunning && runAnchorAtMs !== null ? Math.max(0, Math.floor((nowMs - runAnchorAtMs) / 1000)) : 0;
 
   const timeRemaining = isRunning
     ? Math.max(0, storedRemaining - elapsedSeconds)
@@ -68,21 +70,24 @@ export function usePomodoro(settings: PomodoroSettings = DEFAULT_SETTINGS) {
     const now = Date.now();
     setNowMs(now);
     setIsRunning(true);
-    setRunStartedAtMs(now);
+    setSessionStartedAtMs(now);
+    setRunAnchorAtMs(now);
     setStoredRemaining((prev) => Math.max(0, prev));
   }, []);
 
   const pause = useCallback(() => {
     setStoredRemaining(timeRemaining);
     setIsRunning(false);
-    setRunStartedAtMs(null);
+    setSessionStartedAtMs(null);
+    setRunAnchorAtMs(null);
   }, [timeRemaining]);
 
   const toggle = useCallback(() => {
     if (isRunning) {
       setStoredRemaining(timeRemaining);
       setIsRunning(false);
-      setRunStartedAtMs(null);
+      setSessionStartedAtMs(null);
+      setRunAnchorAtMs(null);
       return;
     }
 
@@ -90,12 +95,14 @@ export function usePomodoro(settings: PomodoroSettings = DEFAULT_SETTINGS) {
     setNowMs(now);
     setStoredRemaining(timeRemaining);
     setIsRunning(true);
-    setRunStartedAtMs(now);
+    setSessionStartedAtMs(now);
+    setRunAnchorAtMs(now);
   }, [isRunning, timeRemaining]);
 
   const reset = useCallback(() => {
     setIsRunning(false);
-    setRunStartedAtMs(null);
+    setSessionStartedAtMs(null);
+    setRunAnchorAtMs(null);
     setStoredRemaining(
       mode === 'focus' ? settings.focusDuration * 60 : getBreakDurationForSessions(sessionsCompleted) * 60
     );
@@ -105,7 +112,7 @@ export function usePomodoro(settings: PomodoroSettings = DEFAULT_SETTINGS) {
     (
       newMode: TimerMode,
       nextSessionCount?: number,
-      opts?: { keepRunning?: boolean; remainingSeconds?: number; startedAt?: string | null }
+      opts?: { keepRunning?: boolean; remainingSeconds?: number; startedAt?: string | null; anchorAt?: string | null }
     ) => {
       const sessionCount = nextSessionCount ?? sessionsCompleted;
       const nextRemaining =
@@ -114,7 +121,8 @@ export function usePomodoro(settings: PomodoroSettings = DEFAULT_SETTINGS) {
           ? settings.focusDuration * 60
           : getBreakDurationForSessions(sessionCount) * 60);
       const keepRunning = Boolean(opts?.keepRunning);
-      const remoteStartedAt = opts?.startedAt ? new Date(opts.startedAt).getTime() : null;
+      const remoteSessionStartedAt = opts?.startedAt ? new Date(opts.startedAt).getTime() : null;
+      const remoteAnchorAt = opts?.anchorAt ? new Date(opts.anchorAt).getTime() : null;
       const now = Date.now();
 
       setMode(newMode);
@@ -122,7 +130,8 @@ export function usePomodoro(settings: PomodoroSettings = DEFAULT_SETTINGS) {
       setStoredRemaining(nextRemaining);
       setIsRunning(keepRunning);
       setNowMs(now);
-      setRunStartedAtMs(keepRunning ? remoteStartedAt ?? now : null);
+      setSessionStartedAtMs(keepRunning ? remoteSessionStartedAt ?? now : null);
+      setRunAnchorAtMs(keepRunning ? remoteAnchorAt ?? remoteSessionStartedAt ?? now : null);
     },
     [getBreakDurationForSessions, sessionsCompleted, settings.focusDuration]
   );
@@ -141,16 +150,18 @@ export function usePomodoro(settings: PomodoroSettings = DEFAULT_SETTINGS) {
   }, [isRunning, mode, sessionsCompleted, switchMode]);
 
   const syncState = useCallback(
-    ({ mode: nextMode, isRunning: nextRunning, remainingSeconds, sessionsCompleted: nextSessions, startedAt }: SyncPayload) => {
+    ({ mode: nextMode, isRunning: nextRunning, remainingSeconds, sessionsCompleted: nextSessions, startedAt, anchorAt }: SyncPayload) => {
       const now = Date.now();
-      const remoteStartedAtMs = startedAt ? new Date(startedAt).getTime() : null;
+      const remoteSessionStartedAtMs = startedAt ? new Date(startedAt).getTime() : null;
+      const remoteAnchorAtMs = anchorAt ? new Date(anchorAt).getTime() : null;
 
       setMode(nextMode);
       setSessionsCompleted(nextSessions);
       setStoredRemaining(Math.max(0, remainingSeconds));
       setIsRunning(nextRunning);
       setNowMs(now);
-      setRunStartedAtMs(nextRunning ? remoteStartedAtMs ?? now : null);
+      setSessionStartedAtMs(nextRunning ? remoteSessionStartedAtMs ?? now : null);
+      setRunAnchorAtMs(nextRunning ? remoteAnchorAtMs ?? remoteSessionStartedAtMs ?? now : null);
     },
     []
   );
@@ -171,7 +182,8 @@ export function usePomodoro(settings: PomodoroSettings = DEFAULT_SETTINGS) {
     }
 
     setNowMs(now);
-    setRunStartedAtMs(now);
+    setSessionStartedAtMs(now);
+    setRunAnchorAtMs(now);
   }, [getBreakDurationForSessions, isRunning, mode, sessionsCompleted, settings.focusDuration, timeRemaining]);
 
   const formatTime = useCallback((seconds: number) => {
@@ -187,7 +199,7 @@ export function usePomodoro(settings: PomodoroSettings = DEFAULT_SETTINGS) {
     progress,
     sessionsCompleted,
     formattedTime: formatTime(timeRemaining),
-    startedAt: isRunning && runStartedAtMs !== null ? new Date(runStartedAtMs).toISOString() : null,
+    startedAt: isRunning && sessionStartedAtMs !== null ? new Date(sessionStartedAtMs).toISOString() : null,
     start,
     pause,
     toggle,
