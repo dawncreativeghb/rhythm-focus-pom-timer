@@ -13,6 +13,7 @@ import {
   clearSpotifyAuth,
   getSpotifyProfile,
   connectSpotifyViaIdentity,
+  getSpotifyRedirectUri,
   primeSpotifyLogin,
 } from './spotify-auth.js';
 import {
@@ -49,6 +50,7 @@ let deviceId = null;
 let popupState = null;
 let tickInterval = null;
 let audioUi = null;
+let spotifyConnectReady = false;
 
 function format(sec) {
   const safe = Math.max(0, Number(sec) || 0);
@@ -173,8 +175,14 @@ toggleBtn.addEventListener('click', async () => {
 });
 
 resetBtn.addEventListener('click', async () => {
-  const s = getWorkingState();
-  await applyState({ ...s, isRunning: false, remaining: durationFor(s), startedAt: null, updatedAt: Date.now() });
+  await applyState({
+    mode: 'focus',
+    isRunning: false,
+    remaining: durationFor({ mode: 'focus', sessionsCompleted: 0 }),
+    startedAt: null,
+    sessionsCompleted: 0,
+    updatedAt: Date.now(),
+  });
 });
 
 skipBtn.addEventListener('click', async () => {
@@ -332,7 +340,8 @@ async function renderSpotify() {
   if (!auth) {
     if (statusEl) statusEl.textContent = 'Not connected';
     if (metaEl) metaEl.textContent = 'Use your Spotify playlists for focus and break sessions.';
-    if (errEl) errEl.textContent = '';
+    if (errEl && spotifyConnectReady && /still preparing/i.test(errEl.textContent)) errEl.textContent = '';
+    if (connectBtn) connectBtn.disabled = !spotifyConnectReady;
     connectBtn?.classList.remove('hidden');
     disconnectBtn?.classList.add('hidden');
     return;
@@ -364,6 +373,12 @@ function wireSpotify() {
 
   connectBtn?.addEventListener('click', async () => {
     if (errEl) errEl.textContent = '';
+    if (!spotifyConnectReady) {
+      if (errEl) {
+        errEl.textContent = `Spotify sign-in is still preparing. If this keeps happening, confirm this redirect URI is added in Spotify: ${getSpotifyRedirectUri()}`;
+      }
+      return;
+    }
     connectBtn.disabled = true;
     connectBtn.textContent = 'Connecting…';
     const result = await connectSpotifyViaIdentity();
@@ -412,9 +427,31 @@ function wireSpotify() {
   });
   wireSpotify();
   await renderSpotify();
-  void primeSpotifyLogin().catch((error) => {
-    console.warn('[spotify] preflight failed', error);
-  });
+  const connectBtn = $('spotify-connect');
+  if (connectBtn) {
+    connectBtn.disabled = true;
+    connectBtn.textContent = 'Preparing…';
+  }
+  void primeSpotifyLogin()
+    .then(async () => {
+      spotifyConnectReady = true;
+      if (connectBtn) {
+        connectBtn.disabled = false;
+        connectBtn.textContent = 'Connect';
+      }
+      await renderSpotify();
+    })
+    .catch((error) => {
+      console.warn('[spotify] preflight failed', error);
+      if ($('spotify-error')) {
+        $('spotify-error').textContent =
+          error instanceof Error ? error.message : 'Spotify sign-in setup failed.';
+      }
+      if (connectBtn) {
+        connectBtn.disabled = false;
+        connectBtn.textContent = 'Connect';
+      }
+    });
 
   try {
     deviceId = await getDeviceId();

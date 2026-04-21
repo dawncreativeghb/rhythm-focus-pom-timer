@@ -93,12 +93,14 @@ export async function primeSpotifyLogin() {
 
 export async function connectSpotifyViaIdentity() {
   const redirectUri = getSpotifyRedirectUri();
-  let authUrl;
+  const authUrl = cachedLoginUrl && cachedLoginRedirectUri === redirectUri ? cachedLoginUrl : null;
 
-  try {
-    authUrl = await getSpotifyLoginUrl(redirectUri);
-  } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'Spotify login setup failed.' };
+  if (!authUrl) {
+    void primeSpotifyLogin().catch(() => {});
+    return {
+      ok: false,
+      error: `Spotify sign-in is still preparing. Wait a second and click Connect again. Required redirect URI: ${redirectUri}`,
+    };
   }
 
   let redirectResponseUrl;
