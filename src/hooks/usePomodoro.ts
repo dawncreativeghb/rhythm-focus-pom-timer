@@ -103,10 +103,10 @@ export function usePomodoro(settings: PomodoroSettings = DEFAULT_SETTINGS) {
     setIsRunning(false);
     setSessionStartedAtMs(null);
     setRunAnchorAtMs(null);
-    setStoredRemaining(
-      mode === 'focus' ? settings.focusDuration * 60 : getBreakDurationForSessions(sessionsCompleted) * 60
-    );
-  }, [getBreakDurationForSessions, mode, sessionsCompleted, settings.focusDuration]);
+    setMode('focus');
+    setSessionsCompleted(0);
+    setStoredRemaining(settings.focusDuration * 60);
+  }, [settings.focusDuration]);
 
   const switchMode = useCallback(
     (
