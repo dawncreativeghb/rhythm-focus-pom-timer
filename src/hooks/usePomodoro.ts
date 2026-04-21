@@ -137,17 +137,25 @@ export function usePomodoro(settings: PomodoroSettings = DEFAULT_SETTINGS) {
   );
 
   const skipToNext = useCallback(() => {
-    const wasRunning = isRunning;
+    const now = Date.now();
+    setNowMs(now);
 
     if (mode === 'focus') {
       const newCount = sessionsCompleted + 1;
+      const breakSeconds = getBreakDurationForSessions(newCount) * 60;
+      setMode('break');
       setSessionsCompleted(newCount);
-      switchMode('break', newCount, { keepRunning: wasRunning });
+      setStoredRemaining(breakSeconds);
+      setSessionStartedAtMs(isRunning ? now : null);
+      setRunAnchorAtMs(isRunning ? now : null);
       return;
     }
 
-    switchMode('focus', sessionsCompleted, { keepRunning: wasRunning });
-  }, [isRunning, mode, sessionsCompleted, switchMode]);
+    setMode('focus');
+    setStoredRemaining(settings.focusDuration * 60);
+    setSessionStartedAtMs(isRunning ? now : null);
+    setRunAnchorAtMs(isRunning ? now : null);
+  }, [getBreakDurationForSessions, isRunning, mode, sessionsCompleted, settings.focusDuration]);
 
   const syncState = useCallback(
     ({ mode: nextMode, isRunning: nextRunning, remainingSeconds, sessionsCompleted: nextSessions, startedAt, anchorAt }: SyncPayload) => {
