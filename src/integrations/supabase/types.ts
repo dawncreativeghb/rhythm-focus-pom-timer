@@ -14,66 +14,7 @@ export type Database = {
   }
   public: {
     Tables: {
-      audio_settings: {
-        Row: {
-          created_at: string
-          device_id: string | null
-          settings: Json
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          device_id?: string | null
-          settings?: Json
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          device_id?: string | null
-          settings?: Json
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      timer_state: {
-        Row: {
-          created_at: string
-          device_id: string | null
-          is_running: boolean
-          mode: string
-          remaining_seconds: number
-          sessions_completed: number
-          started_at: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          device_id?: string | null
-          is_running?: boolean
-          mode?: string
-          remaining_seconds?: number
-          sessions_completed?: number
-          started_at?: string | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          device_id?: string | null
-          is_running?: boolean
-          mode?: string
-          remaining_seconds?: number
-          sessions_completed?: number
-          started_at?: string | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Views: {
       [_ in never]: never
