@@ -73,6 +73,22 @@ export function useTimerSync(pomodoro: PomodoroLike) {
 
     const applyRemote = (row: RemoteRow) => {
       if (row.device_id === deviceId) return; // ignore our own echoes
+      // If the remote is running with the same started_at we already have
+      // locally, this is a redundant echo from another device that is in sync
+      // with us. Re-applying it would reset storedRemaining and cause the
+      // visible countdown to lurch.
+      const localStartedAt = pomodoroRef.current.startedAt;
+      if (
+        row.is_running &&
+        localStartedAt &&
+        row.started_at &&
+        new Date(row.started_at).getTime() === new Date(localStartedAt).getTime() &&
+        pomodoroRef.current.mode === row.mode &&
+        pomodoroRef.current.sessionsCompleted === row.sessions_completed
+      ) {
+        return;
+      }
+
       applyingRemoteRef.current = true;
       const wantsRunning = row.is_running;
       const targetMode = (row.mode as TimerMode) ?? 'focus';
