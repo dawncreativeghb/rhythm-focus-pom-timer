@@ -250,17 +250,9 @@ export function useSpotify() {
       // spinner so the UI doesn't hang forever.
       const inIframe = window.top !== window.self;
       if (inIframe) {
-        const popup = window.open(data.url, '_blank', 'noopener,noreferrer');
+        window.open(data.url, '_blank', 'noopener,noreferrer');
         setIsLoading(false);
-        if (!popup) {
-          // Popup blocker ate it — give the user a clickable link.
-          setError(
-            'Browser blocked the Spotify login window. Open this link manually in a new tab: ' +
-              data.url
-          );
-        } else {
-          setError('Complete the Spotify login in the new tab, then return here.');
-        }
+        setError('Complete login in the new tab, then return here.');
       } else {
         window.location.href = data.url;
       }

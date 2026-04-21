@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 export type TimerMode = 'focus' | 'break';
 
@@ -9,6 +9,14 @@ interface PomodoroSettings {
   sessionsBeforeLongBreak: number; // number of focus sessions before long break
 }
 
+interface PomodoroState {
+  mode: TimerMode;
+  timeRemaining: number; // in seconds
+  isRunning: boolean;
+  progress: number; // 0 to 1
+  sessionsCompleted: number;
+}
+
 const DEFAULT_SETTINGS: PomodoroSettings = {
   focusDuration: 25,
   shortBreakDuration: 5,
@@ -16,184 +24,101 @@ const DEFAULT_SETTINGS: PomodoroSettings = {
   sessionsBeforeLongBreak: 4,
 };
 
-interface SyncPayload {
-  mode: TimerMode;
-  isRunning: boolean;
-  remainingSeconds: number;
-  sessionsCompleted: number;
-  startedAt: string | null;
-  anchorAt?: string | null;
-}
-
 export function usePomodoro(settings: PomodoroSettings = DEFAULT_SETTINGS) {
   const [mode, setMode] = useState<TimerMode>('focus');
-  const [storedRemaining, setStoredRemaining] = useState(settings.focusDuration * 60);
+  const [timeRemaining, setTimeRemaining] = useState(settings.focusDuration * 60);
   const [isRunning, setIsRunning] = useState(false);
   const [sessionsCompleted, setSessionsCompleted] = useState(0);
-  const [sessionStartedAtMs, setSessionStartedAtMs] = useState<number | null>(null);
-  const [runAnchorAtMs, setRunAnchorAtMs] = useState<number | null>(null);
-  const [nowMs, setNowMs] = useState(Date.now());
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const getBreakDurationForSessions = useCallback(
-    (count: number) =>
-      count > 0 && count % settings.sessionsBeforeLongBreak === 0
-        ? settings.longBreakDuration
-        : settings.shortBreakDuration,
-    [settings.longBreakDuration, settings.sessionsBeforeLongBreak, settings.shortBreakDuration]
-  );
+  // Determine if this break should be a long break
+  const isLongBreak = sessionsCompleted > 0 && sessionsCompleted % settings.sessionsBeforeLongBreak === 0;
+  
+  const getBreakDuration = () => {
+    return isLongBreak ? settings.longBreakDuration : settings.shortBreakDuration;
+  };
 
-  const totalTime =
-    mode === 'focus' ? settings.focusDuration * 60 : getBreakDurationForSessions(sessionsCompleted) * 60;
+  const totalTime = mode === 'focus' 
+    ? settings.focusDuration * 60 
+    : getBreakDuration() * 60;
 
-  const elapsedSeconds =
-    isRunning && runAnchorAtMs !== null ? Math.max(0, Math.floor((nowMs - runAnchorAtMs) / 1000)) : 0;
-
-  const timeRemaining = isRunning
-    ? Math.max(0, storedRemaining - elapsedSeconds)
-    : storedRemaining;
-
-  const progress = 1 - timeRemaining / totalTime;
-
-  useEffect(() => {
-    if (!isRunning) return;
-
-    const timer = window.setInterval(() => {
-      setNowMs(Date.now());
-    }, 250);
-
-    return () => {
-      window.clearInterval(timer);
-    };
-  }, [isRunning]);
+  const progress = 1 - (timeRemaining / totalTime);
 
   const start = useCallback(() => {
-    const now = Date.now();
-    setNowMs(now);
     setIsRunning(true);
-    setSessionStartedAtMs(now);
-    setRunAnchorAtMs(now);
-    setStoredRemaining((prev) => Math.max(0, prev));
   }, []);
 
   const pause = useCallback(() => {
-    setStoredRemaining(timeRemaining);
     setIsRunning(false);
-    setSessionStartedAtMs(null);
-    setRunAnchorAtMs(null);
-  }, [timeRemaining]);
+  }, []);
 
   const toggle = useCallback(() => {
-    if (isRunning) {
-      setStoredRemaining(timeRemaining);
-      setIsRunning(false);
-      setSessionStartedAtMs(null);
-      setRunAnchorAtMs(null);
-      return;
-    }
-
-    const now = Date.now();
-    setNowMs(now);
-    setStoredRemaining(timeRemaining);
-    setIsRunning(true);
-    setSessionStartedAtMs(now);
-    setRunAnchorAtMs(now);
-  }, [isRunning, timeRemaining]);
+    setIsRunning(prev => !prev);
+  }, []);
 
   const reset = useCallback(() => {
     setIsRunning(false);
-    setSessionStartedAtMs(null);
-    setRunAnchorAtMs(null);
-    setMode('focus');
-    setSessionsCompleted(0);
-    setStoredRemaining(settings.focusDuration * 60);
-  }, [settings.focusDuration]);
+    setTimeRemaining(mode === 'focus' 
+      ? settings.focusDuration * 60 
+      : getBreakDuration() * 60
+    );
+  }, [mode, settings]);
 
-  const switchMode = useCallback(
-    (
-      newMode: TimerMode,
-      nextSessionCount?: number,
-      opts?: { keepRunning?: boolean; remainingSeconds?: number; startedAt?: string | null; anchorAt?: string | null }
-    ) => {
-      const sessionCount = nextSessionCount ?? sessionsCompleted;
-      const nextRemaining =
-        opts?.remainingSeconds ??
-        (newMode === 'focus'
-          ? settings.focusDuration * 60
-          : getBreakDurationForSessions(sessionCount) * 60);
-      const keepRunning = Boolean(opts?.keepRunning);
-      const remoteSessionStartedAt = opts?.startedAt ? new Date(opts.startedAt).getTime() : null;
-      const remoteAnchorAt = opts?.anchorAt ? new Date(opts.anchorAt).getTime() : null;
-      const now = Date.now();
+  const switchMode = useCallback((newMode: TimerMode, nextSessionCount?: number, opts?: { keepRunning?: boolean }) => {
+    const sessCount = nextSessionCount ?? sessionsCompleted;
+    const willBeLongBreak = newMode === 'break' && sessCount > 0 && sessCount % settings.sessionsBeforeLongBreak === 0;
 
-      setMode(newMode);
-      setSessionsCompleted(sessionCount);
-      setStoredRemaining(nextRemaining);
-      setIsRunning(keepRunning);
-      setNowMs(now);
-      setSessionStartedAtMs(keepRunning ? remoteSessionStartedAt ?? now : null);
-      setRunAnchorAtMs(keepRunning ? remoteAnchorAt ?? remoteSessionStartedAt ?? now : null);
-    },
-    [getBreakDurationForSessions, sessionsCompleted, settings.focusDuration]
-  );
+    setMode(newMode);
+    setIsRunning(Boolean(opts?.keepRunning));
+    setTimeRemaining(newMode === 'focus'
+      ? settings.focusDuration * 60
+      : (willBeLongBreak ? settings.longBreakDuration : settings.shortBreakDuration) * 60
+    );
+  }, [settings, sessionsCompleted]);
 
   const skipToNext = useCallback(() => {
-    const now = Date.now();
-    setNowMs(now);
-
+    const wasRunning = isRunning;
     if (mode === 'focus') {
       const newCount = sessionsCompleted + 1;
-      const breakSeconds = getBreakDurationForSessions(newCount) * 60;
-      setMode('break');
       setSessionsCompleted(newCount);
-      setStoredRemaining(breakSeconds);
-      setSessionStartedAtMs(isRunning ? now : null);
-      setRunAnchorAtMs(isRunning ? now : null);
-      return;
-    }
-
-    setMode('focus');
-    setStoredRemaining(settings.focusDuration * 60);
-    setSessionStartedAtMs(isRunning ? now : null);
-    setRunAnchorAtMs(isRunning ? now : null);
-  }, [getBreakDurationForSessions, isRunning, mode, sessionsCompleted, settings.focusDuration]);
-
-  const syncState = useCallback(
-    ({ mode: nextMode, isRunning: nextRunning, remainingSeconds, sessionsCompleted: nextSessions, startedAt, anchorAt }: SyncPayload) => {
-      const now = Date.now();
-      const remoteSessionStartedAtMs = startedAt ? new Date(startedAt).getTime() : null;
-      const remoteAnchorAtMs = anchorAt ? new Date(anchorAt).getTime() : null;
-
-      setMode(nextMode);
-      setSessionsCompleted(nextSessions);
-      setStoredRemaining(Math.max(0, remainingSeconds));
-      setIsRunning(nextRunning);
-      setNowMs(now);
-      setSessionStartedAtMs(nextRunning ? remoteSessionStartedAtMs ?? now : null);
-      setRunAnchorAtMs(nextRunning ? remoteAnchorAtMs ?? remoteSessionStartedAtMs ?? now : null);
-    },
-    []
-  );
-
-  useEffect(() => {
-    if (!isRunning || timeRemaining > 0) return;
-
-    const now = Date.now();
-
-    if (mode === 'focus') {
-      const newSessionCount = sessionsCompleted + 1;
-      setSessionsCompleted(newSessionCount);
-      setMode('break');
-      setStoredRemaining(getBreakDurationForSessions(newSessionCount) * 60);
+      switchMode('break', newCount, { keepRunning: wasRunning });
     } else {
-      setMode('focus');
-      setStoredRemaining(settings.focusDuration * 60);
+      switchMode('focus', undefined, { keepRunning: wasRunning });
+    }
+  }, [mode, switchMode, sessionsCompleted, isRunning]);
+
+  // Timer effect
+  useEffect(() => {
+    if (isRunning && timeRemaining > 0) {
+      intervalRef.current = setInterval(() => {
+        setTimeRemaining(prev => {
+          if (prev <= 1) {
+            // Timer complete
+            if (mode === 'focus') {
+              const newSessionCount = sessionsCompleted + 1;
+              setSessionsCompleted(newSessionCount);
+              setMode('break');
+              // Check if this should be a long break (every 4th session)
+              const shouldBeLongBreak = newSessionCount % settings.sessionsBeforeLongBreak === 0;
+              return shouldBeLongBreak ? settings.longBreakDuration * 60 : settings.shortBreakDuration * 60;
+            } else {
+              setMode('focus');
+              return settings.focusDuration * 60;
+            }
+          }
+          return prev - 1;
+        });
+      }, 1000);
     }
 
-    setNowMs(now);
-    setSessionStartedAtMs(now);
-    setRunAnchorAtMs(now);
-  }, [getBreakDurationForSessions, isRunning, mode, sessionsCompleted, settings.focusDuration, timeRemaining]);
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, [isRunning, timeRemaining, mode, settings]);
 
+  // Format time as MM:SS
   const formatTime = useCallback((seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -207,13 +132,11 @@ export function usePomodoro(settings: PomodoroSettings = DEFAULT_SETTINGS) {
     progress,
     sessionsCompleted,
     formattedTime: formatTime(timeRemaining),
-    startedAt: isRunning && sessionStartedAtMs !== null ? new Date(sessionStartedAtMs).toISOString() : null,
     start,
     pause,
     toggle,
     reset,
     switchMode,
     skipToNext,
-    syncState,
   };
 }

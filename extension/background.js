@@ -1,338 +1,68 @@
-import {
-  supabase,
-  getLocalState,
-  setLocalState,
-  durationFor,
-  hydrateFromCloud,
-  pushState,
-  fromRemoteRow,
-  getDeviceId,
-} from './sync.js';
-import { getAudioSettings, hydrateAudioSettingsFromCloud } from './audio-settings.js';
-import { playSpotifyUri, pauseSpotifyPlayback, getSpotifyAuth } from './spotify-auth.js';
+// Background service worker — fires a Chrome notification when the timer ends,
+// then auto-advances to the next mode.
 
+const FOCUS_MIN = 25;
+const SHORT_BREAK_MIN = 5;
+const LONG_BREAK_MIN = 30;
+const SESSIONS_BEFORE_LONG = 4;
 const ALARM_NAME = 'pomodoro-end';
-const LONG_BREAK_INTERVAL = 4;
-const TRUSTED_WEB_ORIGINS = [
-  'https://rhythm-focus-pom-timer.lovable.app',
-  'https://id-preview--37956388-6962-4650-a7e8-68f572004607.lovable.app',
-];
 
-let realtimeChannel = null;
-let myDeviceId = null;
-let lastKnownState = null;
-let offscreenCreationPromise = null;
-
-function normalizeState(state) {
-  const mode = state?.mode === 'break' ? 'break' : 'focus';
-  const sessionsCompleted = Math.max(0, Number(state?.sessionsCompleted ?? 0));
-  const total = durationFor({ mode, sessionsCompleted });
-  const remaining = Number.isFinite(Number(state?.remaining)) ? Math.max(0, Number(state.remaining)) : total;
-  const startedAt = state?.startedAt ? Number(state.startedAt) : null;
-  const updatedAt = Number.isFinite(Number(state?.updatedAt)) ? Number(state.updatedAt) : startedAt ?? Date.now();
-  return {
-    mode,
-    sessionsCompleted,
-    remaining,
-    isRunning: Boolean(state?.isRunning) && Boolean(startedAt),
-    startedAt: startedAt || null,
-    updatedAt,
-  };
+function durationFor(state) {
+  if (state.mode === 'focus') return FOCUS_MIN * 60;
+  return state.sessionsCompleted > 0 && state.sessionsCompleted % SESSIONS_BEFORE_LONG === 0
+    ? LONG_BREAK_MIN * 60
+    : SHORT_BREAK_MIN * 60;
 }
 
-function isLongBreak(state) {
-  return state.mode === 'break' && state.sessionsCompleted > 0 && state.sessionsCompleted % LONG_BREAK_INTERVAL === 0;
-}
-
-async function ensureOffscreenDocument() {
-  const existing = await clients.matchAll();
-  if (existing.some((client) => client.url.endsWith('/offscreen.html'))) return;
-  if (offscreenCreationPromise) return offscreenCreationPromise;
-
-  offscreenCreationPromise = chrome.offscreen
-    .createDocument({
-      url: 'offscreen.html',
-      reasons: ['AUDIO_PLAYBACK'],
-      justification: 'Play timer music and chimes while the popup is closed.',
-    })
-    .catch((error) => {
-      const message = error instanceof Error ? error.message : String(error);
-      if (!message.includes('single offscreen document')) throw error;
-    })
-    .finally(() => {
-      offscreenCreationPromise = null;
-    });
-
-  return offscreenCreationPromise;
-}
-
-async function sendAudioMessage(message) {
-  try {
-    await ensureOffscreenDocument();
-    await chrome.runtime.sendMessage({ target: 'offscreen', ...message });
-  } catch (error) {
-    console.warn('[audio] message failed', error);
-  }
-}
-
-async function maybePlaySpotifyForMode(settings, mode, isLong) {
-  const auth = await getSpotifyAuth();
-  if (!auth) return false;
-
-  let useFlag, uri;
-  if (mode === 'focus') {
-    useFlag = settings?.useSpotifyForFocus;
-    uri = settings?.spotifyFocusUri;
-  } else if (isLong) {
-    useFlag = settings?.useSpotifyForLongBreak;
-    uri = settings?.spotifyLongBreakUri;
-  } else {
-    useFlag = settings?.useSpotifyForBreak;
-    uri = settings?.spotifyBreakUri;
-  }
-
-  if (!useFlag || !uri) return false;
-
-  const result = await playSpotifyUri(uri);
-  if (!result.ok) console.warn('[spotify] playback failed:', result.error);
-  return result.ok;
-}
-
-async function syncAudioForState(next, prev) {
-  const normalizedNext = normalizeState(next);
-  const normalizedPrev = prev ? normalizeState(prev) : null;
-  const settings = await getAudioSettings();
-
-  if (!normalizedNext.isRunning) {
-    await sendAudioMessage({ type: 'audio-stop' });
-    await pauseSpotifyPlayback().catch(() => {});
-    return;
-  }
-
-  const modeChanged = normalizedPrev?.mode !== normalizedNext.mode;
-  const restarted = !normalizedPrev?.isRunning || normalizedPrev?.startedAt !== normalizedNext.startedAt;
-  if (!modeChanged && !restarted) return;
-
-  const longBreak = isLongBreak(normalizedNext);
-  const spotifyHandled = await maybePlaySpotifyForMode(settings, normalizedNext.mode, longBreak);
-
-  if (normalizedNext.mode === 'break') {
-    if (spotifyHandled) {
-      await sendAudioMessage({ type: 'audio-play-end', settings });
-    } else {
-      await sendAudioMessage({
-        type: 'audio-play-break',
-        settings,
-        isLongBreak: longBreak,
-      });
+async function getState() {
+  const { state } = await chrome.storage.local.get('state');
+  return (
+    state ?? {
+      mode: 'focus',
+      isRunning: false,
+      remaining: FOCUS_MIN * 60,
+      startedAt: null,
+      sessionsCompleted: 0,
     }
-    return;
-  }
-
-  if (spotifyHandled) {
-    if (normalizedPrev?.mode === 'break') {
-      await sendAudioMessage({ type: 'audio-play-end', settings });
-    }
-    return;
-  }
-
-  await sendAudioMessage({
-    type: 'audio-play-focus',
-    settings,
-    transitionedFromBreak: normalizedPrev?.mode === 'break',
-  });
+  );
 }
 
 async function rescheduleAlarm() {
   await chrome.alarms.clear(ALARM_NAME);
-  const s = normalizeState(await getLocalState());
-  if (!s.isRunning || !s.startedAt) return;
-  const elapsedMs = Date.now() - Number(s.updatedAt ?? s.startedAt);
-  const totalMs = s.remaining * 1000;
+  const s = await getState();
+  if (!s.isRunning) return;
+  const elapsedMs = Date.now() - s.startedAt;
+  const totalMs = (s.remaining ?? durationFor(s)) * 1000;
   const remainingMs = Math.max(1000, totalMs - elapsedMs);
   chrome.alarms.create(ALARM_NAME, { when: Date.now() + remainingMs });
 }
 
-async function setupRealtime() {
-  if (realtimeChannel) {
-    try {
-      await supabase.removeChannel(realtimeChannel);
-    } catch {
-      /* ignore */
-    }
-    realtimeChannel = null;
-  }
-
-  const { data } = await supabase.auth.getSession();
-  const user = data?.session?.user;
-  if (!user) return;
-
-  if (!myDeviceId) myDeviceId = await getDeviceId();
-
-  realtimeChannel = supabase
-    .channel(`timer_state:${user.id}`)
-    .on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'timer_state',
-        filter: `user_id=eq.${user.id}`,
-      },
-      async (payload) => {
-        const row = payload.new;
-        if (!row || row.device_id === myDeviceId) return;
-        const previous = lastKnownState ?? normalizeState(await getLocalState());
-        const next = normalizeState(fromRemoteRow(row));
-        await setLocalState(next);
-        lastKnownState = next;
-        await rescheduleAlarm();
-        await syncAudioForState(next, previous);
-      }
-    )
-    .subscribe();
-}
-
-async function applyExternalSession(session) {
-  const { error } = await supabase.auth.setSession(session);
-  if (error) {
-    return { ok: false, error: error.message };
-  }
-
-  await hydrateFromCloud();
-  await hydrateAudioSettingsFromCloud();
-  lastKnownState = normalizeState(await getLocalState());
-  await setupRealtime();
-  await rescheduleAlarm();
-  try {
-    await chrome.runtime.sendMessage({ type: 'extension-auth-updated' });
-  } catch {
-    /* ignore */
-  }
-  return { ok: true };
-}
-
-async function clearBackgroundSession() {
-  await supabase.auth.signOut();
-  await setupRealtime();
-  await rescheduleAlarm();
-  return { ok: true };
-}
-
-async function handleStateChanged(nextState) {
-  const previous = lastKnownState ?? normalizeState(await getLocalState());
-  const next = normalizeState(nextState ?? (await getLocalState()));
-  lastKnownState = next;
-  await rescheduleAlarm();
-  await syncAudioForState(next, previous);
-}
-
-function sendAsyncResponse(sendResponse, work) {
-  work()
-    .then((result) => {
-      sendResponse(result ?? { ok: true });
-    })
-    .catch((error) => {
-      sendResponse({
-        ok: false,
-        error: error instanceof Error ? error.message : 'Background action failed.',
-      });
-    });
-}
-
-chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-  if (msg?.type === 'state-changed') {
-    sendAsyncResponse(sendResponse, async () => {
-      await handleStateChanged(msg.state);
-      return { ok: true };
-    });
-    return true;
-  }
-  if (msg?.type === 'auth-session') {
-    sendAsyncResponse(sendResponse, async () => {
-      if (msg.session?.access_token && msg.session?.refresh_token) {
-        return applyExternalSession(msg.session);
-      }
-      return clearBackgroundSession();
-    });
-    return true;
-  }
-  if (msg?.type === 'auth-changed') {
-    sendAsyncResponse(sendResponse, async () => {
-      await setupRealtime();
-      return { ok: true };
-    });
-    return true;
-  }
-  return false;
-});
-
-chrome.runtime.onMessageExternal.addListener((msg, sender, sendResponse) => {
-  const isTrustedSender = TRUSTED_WEB_ORIGINS.some((origin) => sender.url?.startsWith(origin));
-  if (msg?.type !== 'extension-auth-session' || !isTrustedSender) {
-    return false;
-  }
-
-  applyExternalSession(msg.session)
-    .then(sendResponse)
-    .catch((error) => {
-      sendResponse({
-        ok: false,
-        error: error instanceof Error ? error.message : 'Failed to apply session.',
-      });
-    });
-
-  return true;
+chrome.runtime.onMessage.addListener((msg) => {
+  if (msg?.type === 'state-changed') rescheduleAlarm();
 });
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name !== ALARM_NAME) return;
-  const previous = normalizeState(await getLocalState());
-  const nextMode = previous.mode === 'focus' ? 'break' : 'focus';
-  const nextSessions = previous.mode === 'focus' ? previous.sessionsCompleted + 1 : previous.sessionsCompleted;
-  const next = normalizeState({
+  const s = await getState();
+  const nextMode = s.mode === 'focus' ? 'break' : 'focus';
+  const nextSessions = s.mode === 'focus' ? s.sessionsCompleted + 1 : s.sessionsCompleted;
+  const next = {
     mode: nextMode,
-    isRunning: true,
+    isRunning: false,
     sessionsCompleted: nextSessions,
-    startedAt: Date.now(),
-    remaining: durationFor({ mode: nextMode, sessionsCompleted: nextSessions }),
-    updatedAt: Date.now(),
-  });
-
-  await setLocalState(next);
-  lastKnownState = next;
-
-  const { data } = await supabase.auth.getSession();
-  if (data?.session?.user) await pushState(next);
-
-  await syncAudioForState(next, previous);
-
+    startedAt: null,
+    remaining: 0,
+  };
+  next.remaining = durationFor(next);
+  await chrome.storage.local.set({ state: next });
   chrome.notifications.create({
     type: 'basic',
     iconUrl: 'icon.png',
-    title: previous.mode === 'focus' ? 'Focus complete!' : 'Break over',
-    message: previous.mode === 'focus' ? 'Time for a break.' : 'Back to focus.',
+    title: s.mode === 'focus' ? 'Focus complete!' : 'Break over',
+    message: s.mode === 'focus' ? 'Time for a break.' : 'Back to focus.',
     priority: 2,
   });
 });
 
-async function bootstrap() {
-  myDeviceId = await getDeviceId();
-  lastKnownState = normalizeState(await getLocalState());
-
-  const { data } = await supabase.auth.getSession();
-  if (data?.session?.user) {
-    await hydrateFromCloud();
-    await hydrateAudioSettingsFromCloud();
-    await setupRealtime();
-    lastKnownState = normalizeState(await getLocalState());
-  }
-
-  await rescheduleAlarm();
-  await syncAudioForState(lastKnownState, null);
-}
-
-chrome.runtime.onStartup.addListener(bootstrap);
-chrome.runtime.onInstalled.addListener(bootstrap);
-
-bootstrap();
+chrome.runtime.onStartup.addListener(rescheduleAlarm);
+chrome.runtime.onInstalled.addListener(rescheduleAlarm);

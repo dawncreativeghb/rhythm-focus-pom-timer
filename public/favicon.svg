@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" stroke="#2DD4BF" stroke-linecap="round" stroke-linejoin="round">
-  <!-- Timer ring: ~270° arc, radius 28, gap in top-left -->
-  <path d="M 32 4 A 28 28 0 1 1 4 32" stroke-width="5" fill="none"/>
-  <!-- Play triangle, larger and centered -->
-  <path d="M 22 18 L 22 46 L 47 32 Z" fill="#2DD4BF" stroke="none"/>
-</svg>

@@ -13,16 +13,14 @@
         --primary-fg: hsl(222 47% 11%);
         --break: hsl(38 92% 50%);
         --border: hsl(215 25% 22%);
-        --danger: hsl(0 70% 60%);
       }
       * { box-sizing: border-box; margin: 0; padding: 0; }
       html, body {
-        width: 320px;
+        width: 300px;
         background: var(--bg);
         color: var(--fg);
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
       }
-      body { max-height: 620px; overflow-y: auto; }
       .wrap { padding: 20px; display: flex; flex-direction: column; gap: 16px; align-items: center; }
       .mode {
         display: inline-flex; gap: 4px; padding: 4px; background: var(--card);
@@ -36,30 +34,21 @@
       .mode button.active { background: var(--primary); color: var(--primary-fg); }
       .mode button.active.break { background: var(--break); }
       .ring {
-        --progress: 0;
-        --ring-color: var(--primary);
         width: 180px; height: 180px; border-radius: 50%;
+        background: var(--card);
         display: flex; align-items: center; justify-content: center;
-        position: relative;
-        background:
-          radial-gradient(circle at center, var(--card) 0 66%, transparent 67%),
-          conic-gradient(
-            var(--ring-color) 0turn calc(var(--progress) * 1turn),
-            hsl(215 25% 22% / 0.45) calc(var(--progress) * 1turn) 1turn
-          );
-        box-shadow: inset 0 0 0 1px hsl(215 25% 22% / 0.7);
-        transition: box-shadow 0.3s, background 0.3s;
+        position: relative; border: 4px solid var(--border);
+        transition: border-color 0.3s;
       }
-      .ring.focus { --ring-color: var(--primary); box-shadow: 0 0 40px hsl(174 62% 47% / 0.3), inset 0 0 0 1px hsl(215 25% 22% / 0.7); }
-      .ring.break { --ring-color: var(--break); box-shadow: 0 0 40px hsl(38 92% 50% / 0.3), inset 0 0 0 1px hsl(215 25% 22% / 0.7); }
-      .ring-content { position: relative; z-index: 1; text-align: center; }
-      .time { font-size: 42px; font-weight: 300; font-variant-numeric: tabular-nums; }
+      .ring.focus { border-color: var(--primary); box-shadow: 0 0 40px hsl(174 62% 47% / 0.3); }
+      .ring.break { border-color: var(--break); box-shadow: 0 0 40px hsl(38 92% 50% / 0.3); }
+      .time { font-size: 42px; font-weight: 300; font-variant-numeric: tabular-nums; letter-spacing: -1px; }
       .session { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
       .controls { display: flex; gap: 10px; width: 100%; }
       .btn {
         flex: 1; padding: 10px; border-radius: 10px; border: 1px solid var(--border);
         background: var(--card); color: var(--fg); font-size: 13px; font-weight: 600;
-        cursor: pointer; transition: all 0.15s; text-align: center;
+        cursor: pointer; transition: all 0.15s;
       }
       .btn:hover { background: hsl(222 47% 18%); }
       .btn.primary { background: var(--primary); color: var(--primary-fg); border-color: var(--primary); }
@@ -70,100 +59,6 @@
         cursor: pointer; text-decoration: underline; padding: 0;
       }
       .open-web:hover { color: var(--fg); }
-      .account {
-        width: 100%; display: flex; align-items: center; justify-content: space-between;
-        gap: 8px; font-size: 11px; color: var(--muted);
-        padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px;
-        background: var(--card);
-      }
-      .account .email { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
-      .account.signed-out { justify-content: center; }
-      .account.signed-out .email { display: none; }
-      .account.signed-out button { font-size: 13px; font-weight: 600; color: var(--fg); text-decoration: none; }
-      .account button {
-        background: transparent; border: 0; color: var(--muted);
-        font-size: 11px; cursor: pointer; text-decoration: underline; padding: 0;
-      }
-      .account button:hover { color: var(--fg); }
-      .signin {
-        width: 100%; display: flex; flex-direction: column; gap: 14px;
-        padding: 18px; border: 1px solid var(--border); border-radius: 10px;
-        background: var(--card);
-      }
-      .signin h3 { font-size: 13px; font-weight: 600; text-align: center; margin-bottom: 4px; }
-      .signin input,
-      .audio-item input[type="file"],
-      .audio-volume input[type="range"] {
-        width: 100%;
-      }
-      .signin input,
-      .audio-item input[type="file"],
-      .audio-volume input[type="range"] {
-        background: var(--bg); color: var(--fg); border: 1px solid var(--border);
-        border-radius: 8px; padding: 8px 10px; font-size: 12px; font-family: inherit;
-      }
-      .signin input:focus { outline: none; border-color: var(--primary); }
-      .signin .google-section,
-      .signin .email-section { display: flex; flex-direction: column; gap: 10px; }
-      .signin .row { display: flex; gap: 8px; }
-      .signin .row .btn { padding: 8px; font-size: 12px; }
-      .signin .err { color: var(--danger); font-size: 11px; min-height: 14px; }
-      .signin .divider {
-        display: flex; align-items: center; gap: 8px; margin: 6px 0;
-        font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px;
-      }
-      .signin .divider::before,
-      .signin .divider::after {
-        content: ''; flex: 1; height: 1px; background: var(--border);
-      }
-      .audio {
-        width: 100%; border: 1px solid var(--border); border-radius: 10px;
-        background: var(--card); overflow: hidden;
-      }
-      .audio summary {
-        list-style: none; cursor: pointer; padding: 14px 16px; font-size: 13px; font-weight: 600;
-        display: flex; align-items: center; justify-content: space-between;
-      }
-      .audio summary::-webkit-details-marker { display: none; }
-      .audio summary::after {
-        content: '+'; color: var(--muted); font-size: 16px; line-height: 1;
-      }
-      .audio[open] summary::after { content: '−'; }
-      .audio-body {
-        display: flex; flex-direction: column; gap: 12px; padding: 0 16px 16px;
-        border-top: 1px solid var(--border);
-      }
-      .audio-volume {
-        display: flex; flex-direction: column; gap: 8px; padding-top: 12px;
-      }
-      .audio-volume-row,
-      .audio-item-head,
-      .audio-meta {
-        display: flex; align-items: center; justify-content: space-between; gap: 10px;
-      }
-      .audio-label { font-size: 12px; font-weight: 600; }
-      .audio-value,
-      .audio-name { font-size: 11px; color: var(--muted); }
-      .audio-item {
-        display: flex; flex-direction: column; gap: 8px; padding: 12px;
-        border: 1px solid var(--border); border-radius: 8px; background: hsl(222 47% 13%);
-      }
-      .audio-stack { display: flex; flex-direction: column; gap: 10px; }
-      .spotify-status { display: flex; flex-direction: column; gap: 4px; }
-      .spotify-meta, .spotify-error { font-size: 11px; color: var(--muted); }
-      .spotify-error { color: var(--danger); min-height: 14px; }
-      .spotify-actions { display: flex; gap: 8px; }
-      .spotify-input { background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 12px; font-family: inherit; width: 100%; }
-      .spotify-input:disabled { opacity: 0.55; }
-      .audio-toggle {
-        width: 16px; height: 16px; accent-color: var(--primary);
-      }
-      .ghost-btn {
-        background: transparent; border: 0; color: var(--muted); cursor: pointer;
-        font-size: 11px; text-decoration: underline; padding: 0;
-      }
-      .ghost-btn:disabled { opacity: 0.4; cursor: default; text-decoration: none; }
-      .hidden { display: none !important; }
     </style>
   </head>
   <body>
@@ -173,7 +68,7 @@
         <button data-mode="break">Break</button>
       </div>
       <div class="ring focus" id="ring">
-        <div class="ring-content">
+        <div style="text-align: center;">
           <div class="time" id="time">25:00</div>
           <div class="session" id="session">Session 1</div>
         </div>
@@ -183,121 +78,8 @@
         <button class="btn" id="reset">Reset</button>
         <button class="btn" id="skip">Skip</button>
       </div>
-
-      <div class="account signed-out" id="account">
-        <span class="email" id="account-email"></span>
-        <button id="account-action">Sign in</button>
-      </div>
-
-      <div class="signin hidden" id="signin">
-        <h3>Sign in to sync timer across devices</h3>
-        <div class="google-section">
-          <button class="btn primary" id="signin-google">Sign in with Google</button>
-        </div>
-        <div class="divider"><span>or</span></div>
-        <div class="email-section">
-          <input type="email" id="email" placeholder="you@example.com" autocomplete="email" />
-          <input type="password" id="password" placeholder="Password" autocomplete="current-password" />
-          <div class="row">
-            <button class="btn primary" id="signin-submit">Sign in</button>
-            <button class="btn" id="signin-signup">Create account</button>
-          </div>
-        </div>
-        <div class="err" id="signin-err"></div>
-      </div>
-
-      <details class="audio" id="audio-panel">
-        <summary>Audio</summary>
-        <div class="audio-body">
-          <div class="audio-item audio-stack">
-            <div class="audio-item-head">
-              <span class="audio-label">Spotify</span>
-              <div class="spotify-actions">
-                <button class="btn primary" id="spotify-connect" type="button">Connect</button>
-                <button class="btn hidden" id="spotify-disconnect" type="button">Disconnect</button>
-              </div>
-            </div>
-            <div class="spotify-status">
-              <span class="audio-name" id="spotify-status">Not connected</span>
-              <span class="spotify-meta" id="spotify-meta">Use your Spotify playlists for focus and break sessions.</span>
-            </div>
-            <div class="spotify-error" id="spotify-error"></div>
-
-            <div class="audio-item">
-              <div class="audio-item-head">
-                <span class="audio-label">Use Spotify for Focus</span>
-                <input class="audio-toggle" id="spotify-focus-enabled" type="checkbox" />
-              </div>
-              <input class="spotify-input" id="spotify-focus-uri" type="text" placeholder="Paste Spotify playlist link" />
-            </div>
-
-            <div class="audio-item">
-              <div class="audio-item-head">
-                <span class="audio-label">Use Spotify for Short Break</span>
-                <input class="audio-toggle" id="spotify-break-enabled" type="checkbox" />
-              </div>
-              <input class="spotify-input" id="spotify-break-uri" type="text" placeholder="Paste Spotify playlist link" />
-            </div>
-
-            <div class="audio-item">
-              <div class="audio-item-head">
-                <span class="audio-label">Use Spotify for Long Break</span>
-                <input class="audio-toggle" id="spotify-long-break-enabled" type="checkbox" />
-              </div>
-              <input class="spotify-input" id="spotify-long-break-uri" type="text" placeholder="Paste Spotify playlist link" />
-            </div>
-          </div>
-
-          <div class="audio-volume">
-            <div class="audio-volume-row">
-              <span class="audio-label">Volume</span>
-              <span class="audio-value" id="audio-volume-value">70%</span>
-            </div>
-            <input id="audio-volume" type="range" min="0" max="100" step="1" value="70" />
-          </div>
-
-          <div class="audio-item">
-            <div class="audio-item-head">
-              <span class="audio-label">Focus music</span>
-              <input class="audio-toggle" id="audio-focus-enabled" type="checkbox" checked />
-            </div>
-            <input id="audio-focus-file" type="file" accept="audio/*" />
-            <div class="audio-meta">
-              <span class="audio-name" id="audio-focus-name">No file selected</span>
-              <button class="ghost-btn" id="audio-focus-clear" type="button">Clear</button>
-            </div>
-          </div>
-
-
-          <div class="audio-item">
-            <div class="audio-item-head">
-              <span class="audio-label">Break music</span>
-              <input class="audio-toggle" id="audio-break-enabled" type="checkbox" checked />
-            </div>
-            <input id="audio-break-file" type="file" accept="audio/*" />
-            <div class="audio-meta">
-              <span class="audio-name" id="audio-break-name">No file selected</span>
-              <button class="ghost-btn" id="audio-break-clear" type="button">Clear</button>
-            </div>
-          </div>
-
-          <div class="audio-item">
-            <div class="audio-item-head">
-              <span class="audio-label">Long break music</span>
-              <input class="audio-toggle" id="audio-long-break-enabled" type="checkbox" checked />
-            </div>
-            <input id="audio-long-break-file" type="file" accept="audio/*" />
-            <div class="audio-meta">
-              <span class="audio-name" id="audio-long-break-name">No file selected</span>
-              <button class="ghost-btn" id="audio-long-break-clear" type="button">Clear</button>
-            </div>
-          </div>
-        </div>
-      </details>
-
       <button class="open-web" id="open-web">Open full app</button>
-      <div style="font-size: 9px; color: var(--muted); opacity: 0.6;">v1.3.1</div>
     </div>
-    <script type="module" src="popup.js"></script>
+    <script src="popup.js"></script>
   </body>
 </html>

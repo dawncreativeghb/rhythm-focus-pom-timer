@@ -1,22 +1,9 @@
 {
   "manifest_version": 3,
-  "key": "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDhsI+SVRI6kh+J3Rl8iFgp/LpweGiPFOinawBkFZt1Rz/bdnX7dwfs6UWQtYv7ByoSIfZrV82NBrk+OGWhdaA+6KG/XobnvW9LKsLSi34zxTgafKKrJiZoG+AFbU9+zms6PREM1XtAdcG9UnIkCP14eZHdEGSdHx8+SoXsMmaxpwIDAQAB",
   "name": "Rhythm Focus — Pomodoro",
-  "version": "1.3.1",
-  "description": "Minimalist Pomodoro timer with audio + Spotify playlists for focus and break sessions. Optional sign-in syncs with the web app.",
-  "permissions": ["storage", "alarms", "notifications", "offscreen", "identity"],
-  "host_permissions": [
-    "https://yuwkjkyzzlcgsqojizfl.supabase.co/*",
-    "wss://yuwkjkyzzlcgsqojizfl.supabase.co/*",
-    "https://accounts.spotify.com/*",
-    "https://api.spotify.com/*"
-  ],
-  "externally_connectable": {
-    "matches": [
-      "https://rhythm-focus-pom-timer.lovable.app/*",
-      "https://id-preview--37956388-6962-4650-a7e8-68f572004607.lovable.app/*"
-    ]
-  },
+  "version": "1.0.0",
+  "description": "Minimalist Pomodoro timer in your browser. 25m focus, 5m breaks, long break after 4 sessions.",
+  "permissions": ["storage", "alarms", "notifications"],
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
@@ -24,9 +11,6 @@
       "128": "icon.png"
     }
   },
-  "background": {
-    "service_worker": "background.js",
-    "type": "module"
-  },
+  "background": { "service_worker": "background.js" },
   "icons": { "48": "icon.png", "128": "icon.png" }
 }
