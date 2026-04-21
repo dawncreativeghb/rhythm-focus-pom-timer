@@ -40,32 +40,26 @@ export function useTimerSync(pomodoro: PomodoroLike) {
   const hydratedRef = useRef(false);
   const applyingRemoteRef = useRef(false);
   const pushTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const pomodoroRef = useRef(pomodoro);
+  pomodoroRef.current = pomodoro;
 
   const pushSnapshot = useCallback(async () => {
     if (!user) return;
-
+    const p = pomodoroRef.current;
     await supabase.from('timer_state').upsert(
       {
         user_id: user.id,
-        mode: pomodoro.mode,
-        is_running: pomodoro.isRunning,
-        started_at: pomodoro.startedAt,
-        remaining_seconds: pomodoro.timeRemaining,
-        sessions_completed: pomodoro.sessionsCompleted,
+        mode: p.mode,
+        is_running: p.isRunning,
+        started_at: p.startedAt,
+        remaining_seconds: p.timeRemaining,
+        sessions_completed: p.sessionsCompleted,
         device_id: deviceId,
         updated_at: new Date().toISOString(),
       },
       { onConflict: 'user_id' }
     );
-  }, [
-    deviceId,
-    pomodoro.isRunning,
-    pomodoro.mode,
-    pomodoro.sessionsCompleted,
-    pomodoro.startedAt,
-    pomodoro.timeRemaining,
-    user,
-  ]);
+  }, [deviceId, user]);
 
   // Hydrate + subscribe
   useEffect(() => {
@@ -79,6 +73,22 @@ export function useTimerSync(pomodoro: PomodoroLike) {
 
     const applyRemote = (row: RemoteRow) => {
       if (row.device_id === deviceId) return; // ignore our own echoes
+      // If the remote is running with the same started_at we already have
+      // locally, this is a redundant echo from another device that is in sync
+      // with us. Re-applying it would reset storedRemaining and cause the
+      // visible countdown to lurch.
+      const localStartedAt = pomodoroRef.current.startedAt;
+      if (
+        row.is_running &&
+        localStartedAt &&
+        row.started_at &&
+        new Date(row.started_at).getTime() === new Date(localStartedAt).getTime() &&
+        pomodoroRef.current.mode === row.mode &&
+        pomodoroRef.current.sessionsCompleted === row.sessions_completed
+      ) {
+        return;
+      }
+
       applyingRemoteRef.current = true;
       const wantsRunning = row.is_running;
       const targetMode = (row.mode as TimerMode) ?? 'focus';
@@ -150,6 +160,7 @@ export function useTimerSync(pomodoro: PomodoroLike) {
     pomodoro.isRunning,
     pomodoro.sessionsCompleted,
     pomodoro.startedAt,
+    // Only push timeRemaining changes when paused (otherwise tick spam).
     pomodoro.isRunning ? null : pomodoro.timeRemaining,
     pushSnapshot,
   ]);
