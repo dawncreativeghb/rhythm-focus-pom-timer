@@ -1,4 +1,3 @@
-/* @refresh reload */
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { usePomodoro } from '@/hooks/usePomodoro';
@@ -25,26 +24,16 @@ const Index = () => {
   const [musicEnabled, setMusicEnabled] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
-  // A break is "long" if we're in break mode after completing a multiple of 4 focus sessions
-  const isLongBreak =
-    pomodoro.mode === 'break' &&
-    pomodoro.sessionsCompleted > 0 &&
-    pomodoro.sessionsCompleted % 4 === 0;
-
   const useSpotifyNow =
     pomodoro.mode === 'focus'
       ? audioSettings.settings.useSpotifyForFocus
-      : isLongBreak
-        ? audioSettings.settings.useSpotifyForLongBreak
-        : audioSettings.settings.useSpotifyForBreak;
+      : audioSettings.settings.useSpotifyForBreak;
 
   // Local audio playback (only when not using Spotify for current mode)
   useAudioPlayer({
     settings: audioSettings.settings,
     mode: pomodoro.mode,
     isRunning: pomodoro.isRunning && musicEnabled && !useSpotifyNow,
-    isLongBreak,
-    timeRemaining: pomodoro.timeRemaining,
   });
 
   // Spotify volume sync
@@ -68,9 +57,7 @@ const Index = () => {
     const uri =
       pomodoro.mode === 'focus'
         ? audioSettings.settings.spotifyFocusUri
-        : isLongBreak
-          ? audioSettings.settings.spotifyLongBreakUri
-          : audioSettings.settings.spotifyBreakUri;
+        : audioSettings.settings.spotifyBreakUri;
 
     const key = `${pomodoro.mode}:${uri}`;
 
@@ -88,6 +75,7 @@ const Index = () => {
                 trackUri: state.trackUri,
                 positionMs: state.positionMs,
               });
+              console.log('[Spotify] saved position for', previousUri, state);
             }
           }
           await spotify.pause();
@@ -132,27 +120,9 @@ const Index = () => {
     spotify.playerReady,
     audioSettings.settings.spotifyFocusUri,
     audioSettings.settings.spotifyBreakUri,
-    audioSettings.settings.spotifyLongBreakUri,
-    isLongBreak,
   ]);
 
-  const handleTimerToggle = () => {
-    const willStart = !pomodoro.isRunning;
-    // IMPORTANT: call primePlayback synchronously (no await) so the user-gesture
-    // chain stays intact for iOS Safari / Chrome autoplay policies.
-    if (willStart && musicEnabled && useSpotifyNow && spotify.isConnected) {
-      void spotify.primePlayback();
-    }
-    pomodoro.toggle();
-  };
-
-  const handleMusicToggle = () => {
-    const willEnable = !musicEnabled;
-    if (willEnable && pomodoro.isRunning && useSpotifyNow && spotify.isConnected) {
-      void spotify.primePlayback();
-    }
-    setMusicEnabled((prev) => !prev);
-  };
+  const handleMusicToggle = () => setMusicEnabled((prev) => !prev);
 
   const hasAudioConfigured = !!(
     audioSettings.settings.focusMusic ||
@@ -200,7 +170,7 @@ const Index = () => {
         <ControlButton
           isRunning={pomodoro.isRunning}
           mode={pomodoro.mode}
-          onToggle={handleTimerToggle}
+          onToggle={pomodoro.toggle}
           onReset={pomodoro.reset}
           onSkip={pomodoro.skipToNext}
         />
@@ -224,19 +194,6 @@ const Index = () => {
             ? 'Tap to control music • Settings for audio'
             : 'Tap settings to add music or connect Spotify'}
         </p>
-        {useSpotifyNow && spotify.isConnected && (
-          <p className="text-xs text-center max-w-xs">
-            {!spotify.isPremium && spotify.profile ? (
-              <span className="text-destructive">
-                Spotify Premium is required to play playlists in-app.
-              </span>
-            ) : !spotify.playerReady ? (
-              <span className="text-muted-foreground">Connecting Spotify player…</span>
-            ) : spotify.error ? (
-              <span className="text-destructive">{spotify.error}</span>
-            ) : null}
-          </p>
-        )}
       </motion.footer>
 
       <AudioSettingsModal
@@ -246,20 +203,14 @@ const Index = () => {
         onSetFocusMusic={audioSettings.setFocusMusic}
         onSetBreakChime={audioSettings.setBreakChime}
         onSetBreakMusic={audioSettings.setBreakMusic}
-        onSetLongBreakMusic={audioSettings.setLongBreakMusic}
         onToggleFocusMusic={audioSettings.toggleFocusMusic}
         onToggleBreakChime={audioSettings.toggleBreakChime}
-        onToggleBreakWarning={audioSettings.toggleBreakWarning}
-        onToggleBreakEndChime={audioSettings.toggleBreakEndChime}
         onToggleBreakMusic={audioSettings.toggleBreakMusic}
-        onToggleLongBreakMusic={audioSettings.toggleLongBreakMusic}
         onSetVolume={audioSettings.setVolume}
         onSetSpotifyFocusUri={audioSettings.setSpotifyFocusUri}
         onSetSpotifyBreakUri={audioSettings.setSpotifyBreakUri}
-        onSetSpotifyLongBreakUri={audioSettings.setSpotifyLongBreakUri}
         onToggleUseSpotifyForFocus={audioSettings.toggleUseSpotifyForFocus}
         onToggleUseSpotifyForBreak={audioSettings.toggleUseSpotifyForBreak}
-        onToggleUseSpotifyForLongBreak={audioSettings.toggleUseSpotifyForLongBreak}
         spotify={{
           isConnected: spotify.isConnected,
           isPremium: spotify.isPremium,

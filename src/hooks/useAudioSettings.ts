@@ -4,20 +4,14 @@ export interface AudioSettings {
   focusMusic: AudioFile | null;
   breakChime: AudioFile | null;
   breakMusic: AudioFile | null;
-  longBreakMusic: AudioFile | null;
   focusMusicEnabled: boolean;
   breakChimeEnabled: boolean;
-  breakWarningEnabled: boolean;
-  breakEndChimeEnabled: boolean;
   breakMusicEnabled: boolean;
-  longBreakMusicEnabled: boolean;
   volume: number; // 0 to 1
   spotifyFocusUri: string;
   spotifyBreakUri: string;
-  spotifyLongBreakUri: string;
   useSpotifyForFocus: boolean;
   useSpotifyForBreak: boolean;
-  useSpotifyForLongBreak: boolean;
 }
 
 export interface AudioFile {
@@ -32,20 +26,14 @@ const DEFAULT_SETTINGS: AudioSettings = {
   focusMusic: null,
   breakChime: null,
   breakMusic: null,
-  longBreakMusic: null,
   focusMusicEnabled: true,
   breakChimeEnabled: true,
-  breakWarningEnabled: true,
-  breakEndChimeEnabled: true,
   breakMusicEnabled: true,
-  longBreakMusicEnabled: true,
   volume: 0.7,
   spotifyFocusUri: '',
   spotifyBreakUri: '',
-  spotifyLongBreakUri: '',
   useSpotifyForFocus: false,
   useSpotifyForBreak: false,
-  useSpotifyForLongBreak: false,
 };
 
 // Helper to convert File to base64 for localStorage persistence
@@ -67,10 +55,8 @@ export function useAudioSettings() {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
-        const parsed = JSON.parse(stored) as Partial<AudioSettings>;
-        // Merge into defaults so newly-added fields aren't undefined for users
-        // with older saved settings.
-        setSettings({ ...DEFAULT_SETTINGS, ...parsed });
+        const parsed = JSON.parse(stored) as AudioSettings;
+        setSettings(parsed);
       }
     } catch (error) {
       console.error('Failed to load audio settings:', error);
@@ -125,18 +111,6 @@ export function useAudioSettings() {
     }));
   }, []);
 
-  const setLongBreakMusic = useCallback(async (file: File | null) => {
-    if (!file) {
-      setSettings(prev => ({ ...prev, longBreakMusic: null }));
-      return;
-    }
-    const url = await fileToDataUrl(file);
-    setSettings(prev => ({
-      ...prev,
-      longBreakMusic: { name: file.name, url, type: file.type },
-    }));
-  }, []);
-
   const toggleFocusMusic = useCallback(() => {
     setSettings(prev => ({ ...prev, focusMusicEnabled: !prev.focusMusicEnabled }));
   }, []);
@@ -145,20 +119,8 @@ export function useAudioSettings() {
     setSettings(prev => ({ ...prev, breakChimeEnabled: !prev.breakChimeEnabled }));
   }, []);
 
-  const toggleBreakWarning = useCallback(() => {
-    setSettings(prev => ({ ...prev, breakWarningEnabled: !prev.breakWarningEnabled }));
-  }, []);
-
-  const toggleBreakEndChime = useCallback(() => {
-    setSettings(prev => ({ ...prev, breakEndChimeEnabled: !prev.breakEndChimeEnabled }));
-  }, []);
-
   const toggleBreakMusic = useCallback(() => {
     setSettings(prev => ({ ...prev, breakMusicEnabled: !prev.breakMusicEnabled }));
-  }, []);
-
-  const toggleLongBreakMusic = useCallback(() => {
-    setSettings(prev => ({ ...prev, longBreakMusicEnabled: !prev.longBreakMusicEnabled }));
   }, []);
 
   const setVolume = useCallback((volume: number) => {
@@ -185,34 +147,20 @@ export function useAudioSettings() {
     setSettings(prev => ({ ...prev, useSpotifyForBreak: !prev.useSpotifyForBreak }));
   }, []);
 
-  const setSpotifyLongBreakUri = useCallback((uri: string) => {
-    setSettings(prev => ({ ...prev, spotifyLongBreakUri: uri }));
-  }, []);
-
-  const toggleUseSpotifyForLongBreak = useCallback(() => {
-    setSettings(prev => ({ ...prev, useSpotifyForLongBreak: !prev.useSpotifyForLongBreak }));
-  }, []);
-
   return {
     settings,
     isLoaded,
     setFocusMusic,
     setBreakChime,
     setBreakMusic,
-    setLongBreakMusic,
     toggleFocusMusic,
     toggleBreakChime,
-    toggleBreakWarning,
-    toggleBreakEndChime,
     toggleBreakMusic,
-    toggleLongBreakMusic,
     setVolume,
     clearAll,
     setSpotifyFocusUri,
     setSpotifyBreakUri,
-    setSpotifyLongBreakUri,
     toggleUseSpotifyForFocus,
     toggleUseSpotifyForBreak,
-    toggleUseSpotifyForLongBreak,
   };
 }

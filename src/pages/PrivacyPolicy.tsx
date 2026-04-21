@@ -46,70 +46,14 @@ const PrivacyPolicy = () => {
           <section>
             <h2 className="text-xl font-medium mb-3">Spotify integration (optional)</h2>
             <p className="text-muted-foreground mb-3">
-              Rhythm Focus uses the official Spotify Web API and Web Playback SDK
-              under Spotify's{" "}
-              <a
-                href="https://developer.spotify.com/terms"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-foreground underline underline-offset-4 hover:text-primary transition-colors"
-              >
-                Developer Terms
-              </a>
-              . If you choose to connect your Spotify account, here's exactly what happens:
+              If you choose to connect your Spotify account, we use Spotify's official
+              API to control playback during your focus sessions. We:
             </p>
             <ul className="list-disc pl-6 space-y-2 text-muted-foreground">
-              <li>
-                <strong className="text-foreground">Scopes we request:</strong>{" "}
-                <code className="text-xs">streaming</code>,{" "}
-                <code className="text-xs">user-read-email</code>,{" "}
-                <code className="text-xs">user-read-private</code>,{" "}
-                <code className="text-xs">user-modify-playback-state</code>,{" "}
-                <code className="text-xs">user-read-playback-state</code> — only what's
-                needed to play your chosen playlist during sessions.
-              </li>
-              <li>
-                Your Spotify access and refresh tokens are stored only in your
-                browser's local storage on your device. They are never sent to or
-                stored on our servers.
-              </li>
-              <li>
-                We never read, store, or share your listening history, library,
-                playlists' contents, or personal Spotify data beyond your display
-                name and account type (used to show "Connected as …" and to verify
-                Premium status).
-              </li>
-              <li>
-                Spotify data is never shared with third parties, advertisers, or
-                analytics services.
-              </li>
-              <li>
-                You can disconnect Spotify at any time from the audio settings
-                panel — this clears all stored tokens immediately. You can also
-                revoke access directly from your{" "}
-                <a
-                  href="https://www.spotify.com/account/apps/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-foreground underline underline-offset-4 hover:text-primary transition-colors"
-                >
-                  Spotify account apps page
-                </a>
-                .
-              </li>
-              <li>
-                Spotify is the data controller for your Spotify account data —
-                see{" "}
-                <a
-                  href="https://www.spotify.com/legal/privacy-policy/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-foreground underline underline-offset-4 hover:text-primary transition-colors"
-                >
-                  Spotify's Privacy Policy
-                </a>
-                .
-              </li>
+              <li>Store your Spotify access token securely on your device only</li>
+              <li>Never share your Spotify data with third parties</li>
+              <li>Never store your listening history on our servers</li>
+              <li>Allow you to disconnect Spotify at any time from app settings</li>
             </ul>
           </section>
 

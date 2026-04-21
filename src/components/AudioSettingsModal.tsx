@@ -40,20 +40,14 @@ interface AudioSettingsModalProps {
   onSetFocusMusic: (file: File | null) => void;
   onSetBreakChime: (file: File | null) => void;
   onSetBreakMusic: (file: File | null) => void;
-  onSetLongBreakMusic: (file: File | null) => void;
   onToggleFocusMusic: () => void;
   onToggleBreakChime: () => void;
-  onToggleBreakWarning: () => void;
-  onToggleBreakEndChime: () => void;
   onToggleBreakMusic: () => void;
-  onToggleLongBreakMusic: () => void;
   onSetVolume: (volume: number) => void;
   onSetSpotifyFocusUri: (uri: string) => void;
   onSetSpotifyBreakUri: (uri: string) => void;
-  onSetSpotifyLongBreakUri: (uri: string) => void;
   onToggleUseSpotifyForFocus: () => void;
   onToggleUseSpotifyForBreak: () => void;
-  onToggleUseSpotifyForLongBreak: () => void;
   spotify: SpotifyState;
 }
 
@@ -142,20 +136,14 @@ export function AudioSettingsModal({
   onSetFocusMusic,
   onSetBreakChime,
   onSetBreakMusic,
-  onSetLongBreakMusic,
   onToggleFocusMusic,
   onToggleBreakChime,
-  onToggleBreakWarning,
-  onToggleBreakEndChime,
   onToggleBreakMusic,
-  onToggleLongBreakMusic,
   onSetVolume,
   onSetSpotifyFocusUri,
   onSetSpotifyBreakUri,
-  onSetSpotifyLongBreakUri,
   onToggleUseSpotifyForFocus,
   onToggleUseSpotifyForBreak,
-  onToggleUseSpotifyForLongBreak,
   spotify,
 }: AudioSettingsModalProps) {
   return (
@@ -175,7 +163,7 @@ export function AudioSettingsModal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed inset-x-4 top-[max(1rem,env(safe-area-inset-top))] bottom-[max(1rem,env(safe-area-inset-bottom))] z-50 mx-auto flex max-w-md flex-col overflow-y-auto overscroll-contain rounded-2xl bg-card p-5 shadow-xl sm:p-6"
+            className="fixed inset-x-4 top-1/2 z-50 mx-auto max-h-[85dvh] max-w-md -translate-y-1/2 overflow-y-auto overscroll-contain rounded-2xl bg-card p-5 shadow-xl sm:p-6"
           >
             <div className="mb-6 flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -210,19 +198,19 @@ export function AudioSettingsModal({
 
               {/* Spotify */}
               <div className="flex flex-col gap-3 rounded-lg border border-primary/30 bg-secondary/50 p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1DB954]/20 text-[#1DB954]">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1DB954]/20 text-[#1DB954]">
                       <Music className="h-5 w-5" />
                     </div>
-                    <div className="min-w-0">
+                    <div>
                       <p className="font-medium text-foreground">Spotify</p>
-                      <p className="truncate text-xs text-muted-foreground">
+                      <p className="text-xs text-muted-foreground">
                         {spotify.isConnected
                           ? spotify.profile
                             ? `${spotify.profile.display_name} • ${spotify.profile.product}`
                             : 'Connected'
-                          : 'Stream your own playlists during sessions'}
+                          : 'Premium required for playback'}
                       </p>
                     </div>
                   </div>
@@ -231,28 +219,11 @@ export function AudioSettingsModal({
                       Disconnect
                     </Button>
                   ) : (
-                    <Button
-                      size="sm"
-                      onClick={spotify.connect}
-                      disabled={spotify.isLoading}
-                      className="bg-[#1DB954] text-black hover:bg-[#1DB954]/90"
-                    >
+                    <Button size="sm" onClick={spotify.connect} disabled={spotify.isLoading}>
                       {spotify.isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Connect'}
                     </Button>
                   )}
                 </div>
-
-                {!spotify.isConnected && (
-                  <div className="rounded-md bg-background/50 p-3 text-xs text-muted-foreground">
-                    <p className="mb-2 font-medium text-foreground">First-time setup</p>
-                    <ol className="list-decimal space-y-1 pl-4">
-                      <li>You'll need a Spotify <strong>Premium</strong> account.</li>
-                      <li>Click <strong>Connect</strong> and approve access.</li>
-                      <li>Paste a Spotify playlist link for focus and/or break.</li>
-                      <li>Press play — your music starts automatically.</li>
-                    </ol>
-                  </div>
-                )}
 
                 {spotify.error && (
                   <p className="text-xs text-destructive">{spotify.error}</p>
@@ -275,7 +246,7 @@ export function AudioSettingsModal({
                     </div>
                     {settings.useSpotifyForFocus && (
                       <Input
-                        placeholder="Paste Spotify playlist link"
+                        placeholder="Paste Spotify link or URI"
                         value={settings.spotifyFocusUri}
                         onChange={(e) => onSetSpotifyFocusUri(normalizeSpotifyUri(e.target.value))}
                         className="text-xs"
@@ -283,7 +254,7 @@ export function AudioSettingsModal({
                     )}
 
                     <div className="flex items-center justify-between gap-2">
-                      <Label className="text-xs">Use Spotify for Short Break</Label>
+                      <Label className="text-xs">Use Spotify for Break</Label>
                       <Switch
                         checked={settings.useSpotifyForBreak}
                         onCheckedChange={onToggleUseSpotifyForBreak}
@@ -291,32 +262,16 @@ export function AudioSettingsModal({
                     </div>
                     {settings.useSpotifyForBreak && (
                       <Input
-                        placeholder="Paste Spotify playlist link"
+                        placeholder="Paste Spotify link or URI"
                         value={settings.spotifyBreakUri}
                         onChange={(e) => onSetSpotifyBreakUri(normalizeSpotifyUri(e.target.value))}
                         className="text-xs"
                       />
                     )}
 
-                    <div className="flex items-center justify-between gap-2">
-                      <Label className="text-xs">Use Spotify for Long Break</Label>
-                      <Switch
-                        checked={settings.useSpotifyForLongBreak}
-                        onCheckedChange={onToggleUseSpotifyForLongBreak}
-                      />
-                    </div>
-                    {settings.useSpotifyForLongBreak && (
-                      <Input
-                        placeholder="Paste Spotify playlist link (30-min break)"
-                        value={settings.spotifyLongBreakUri}
-                        onChange={(e) => onSetSpotifyLongBreakUri(normalizeSpotifyUri(e.target.value))}
-                        className="text-xs"
-                      />
-                    )}
-
                     <p className="flex items-center gap-1 text-[10px] text-muted-foreground">
                       <ExternalLink className="h-3 w-3" />
-                      Tip: in Spotify, right-click a playlist → Share → Copy link
+                      Paste any Spotify share link — we'll convert it automatically
                     </p>
                   </div>
                 )}
@@ -333,8 +288,8 @@ export function AudioSettingsModal({
               />
 
               <FileUploadRow
-                label="Break Start Chime"
-                description="Plays when a break begins (uses default if no upload)"
+                label="Break Chime"
+                description="Plays when break starts"
                 icon={<Bell className="h-5 w-5" />}
                 file={settings.breakChime}
                 enabled={settings.breakChimeEnabled}
@@ -342,51 +297,14 @@ export function AudioSettingsModal({
                 onFileSelect={(file) => onSetBreakChime(file)}
               />
 
-              {/* Transition cue toggles (use built-in default sounds) */}
-              <div className="flex flex-col gap-3 rounded-lg bg-secondary/50 p-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/20 text-primary">
-                    <Bell className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-foreground">Break Cues</p>
-                    <p className="text-xs text-muted-foreground">Built-in chimes — no upload needed</p>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between gap-2">
-                  <Label className="text-xs">1-minute warning</Label>
-                  <Switch
-                    checked={settings.breakWarningEnabled}
-                    onCheckedChange={onToggleBreakWarning}
-                  />
-                </div>
-                <div className="flex items-center justify-between gap-2">
-                  <Label className="text-xs">Break-end chime</Label>
-                  <Switch
-                    checked={settings.breakEndChimeEnabled}
-                    onCheckedChange={onToggleBreakEndChime}
-                  />
-                </div>
-              </div>
-
               <FileUploadRow
-                label="Short Break Music"
-                description="Plays during 5-min short breaks"
+                label="Break Music"
+                description="Plays during break time"
                 icon={<Music className="h-5 w-5" />}
                 file={settings.breakMusic}
                 enabled={settings.breakMusicEnabled}
                 onToggle={onToggleBreakMusic}
                 onFileSelect={(file) => onSetBreakMusic(file)}
-              />
-
-              <FileUploadRow
-                label="Long Break Music"
-                description="Plays during 30-min long breaks (every 4th break)"
-                icon={<Music className="h-5 w-5" />}
-                file={settings.longBreakMusic}
-                enabled={settings.longBreakMusicEnabled}
-                onToggle={onToggleLongBreakMusic}
-                onFileSelect={(file) => onSetLongBreakMusic(file)}
               />
             </div>
 

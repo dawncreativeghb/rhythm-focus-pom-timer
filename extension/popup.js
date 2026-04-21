@@ -1,4 +1,4 @@
-// Rhythm Focus popup — reads/writes timer state from chrome.storage,
+// Focus Flow popup — reads/writes timer state from chrome.storage,
 // background.js owns the alarm and authoritative ticking.
 
 const FOCUS_MIN = 25;

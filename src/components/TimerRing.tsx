@@ -13,9 +13,7 @@ export function TimerRing({ progress, mode, isRunning, formattedTime }: TimerRin
   const strokeWidth = 6;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
-  // SVG is rotated -90° so 0 is at 12 o'clock. Positive offset shifts the dash
-  // gap counterclockwise (toward 9 o'clock), matching the app icon direction.
-  const strokeDashoffset = circumference * progress;
+  const strokeDashoffset = circumference * (1 - progress);
 
   return (
     <div className="relative flex items-center justify-center">
@@ -41,7 +39,7 @@ export function TimerRing({ progress, mode, isRunning, formattedTime }: TimerRin
       <svg
         width={size}
         height={size}
-        className="-rotate-90"
+        className="transform -rotate-90"
         aria-hidden="true"
       >
         <circle
@@ -64,9 +62,9 @@ export function TimerRing({ progress, mode, isRunning, formattedTime }: TimerRin
           strokeWidth={strokeWidth}
           strokeLinecap="round"
           strokeDasharray={circumference}
-          initial={false}
+          initial={{ strokeDashoffset: circumference }}
           animate={{ strokeDashoffset }}
-          transition={{ duration: isRunning ? 1 : 0.3, ease: 'linear' }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
         />
       </svg>
 
