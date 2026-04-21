@@ -40,32 +40,26 @@ export function useTimerSync(pomodoro: PomodoroLike) {
   const hydratedRef = useRef(false);
   const applyingRemoteRef = useRef(false);
   const pushTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const pomodoroRef = useRef(pomodoro);
+  pomodoroRef.current = pomodoro;
 
   const pushSnapshot = useCallback(async () => {
     if (!user) return;
-
+    const p = pomodoroRef.current;
     await supabase.from('timer_state').upsert(
       {
         user_id: user.id,
-        mode: pomodoro.mode,
-        is_running: pomodoro.isRunning,
-        started_at: pomodoro.startedAt,
-        remaining_seconds: pomodoro.timeRemaining,
-        sessions_completed: pomodoro.sessionsCompleted,
+        mode: p.mode,
+        is_running: p.isRunning,
+        started_at: p.startedAt,
+        remaining_seconds: p.timeRemaining,
+        sessions_completed: p.sessionsCompleted,
         device_id: deviceId,
         updated_at: new Date().toISOString(),
       },
       { onConflict: 'user_id' }
     );
-  }, [
-    deviceId,
-    pomodoro.isRunning,
-    pomodoro.mode,
-    pomodoro.sessionsCompleted,
-    pomodoro.startedAt,
-    pomodoro.timeRemaining,
-    user,
-  ]);
+  }, [deviceId, user]);
 
   // Hydrate + subscribe
   useEffect(() => {
@@ -150,6 +144,7 @@ export function useTimerSync(pomodoro: PomodoroLike) {
     pomodoro.isRunning,
     pomodoro.sessionsCompleted,
     pomodoro.startedAt,
+    // Only push timeRemaining changes when paused (otherwise tick spam).
     pomodoro.isRunning ? null : pomodoro.timeRemaining,
     pushSnapshot,
   ]);
