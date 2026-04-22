@@ -56,7 +56,18 @@ interface YouTubePlayerProps {
   shouldPlay: boolean;
   volume: number; // 0..1
   visible: boolean;
+  /** Optional status callback for debug/telemetry. */
+  onStatus?: (status: { ready: boolean; playerState: string; lastUrl: string }) => void;
 }
+
+const YT_STATE_LABELS: Record<number, string> = {
+  [-1]: 'unstarted',
+  0: 'ended',
+  1: 'playing',
+  2: 'paused',
+  3: 'buffering',
+  5: 'cued',
+};
 
 /**
  * Small YouTube player (visibility required by YouTube ToS).

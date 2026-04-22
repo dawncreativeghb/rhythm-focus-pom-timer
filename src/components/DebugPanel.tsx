@@ -56,7 +56,7 @@ export function DebugPanel({ state, onSetMode, onToggleRunning, onSimulateCycle 
               <Btn onClick={() => onSetMode('focus')} active={state.mode === 'focus'}>
                 Focus
               </Btn>
-              <Btn onClick={() => onSetMode('shortBreak')} active={state.mode === 'shortBreak'}>
+              <Btn onClick={() => onSetMode('break')} active={state.mode === 'break'}>
                 Break
               </Btn>
               <Btn onClick={onToggleRunning}>{state.isRunning ? 'Pause' : 'Play'}</Btn>
