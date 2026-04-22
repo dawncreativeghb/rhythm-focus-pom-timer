@@ -12,6 +12,7 @@ import { AudioSettingsModal } from '@/components/AudioSettingsModal';
 import { ModeSwitcher } from '@/components/ModeSwitcher';
 import { YouTubePlayer } from '@/components/YouTubePlayer';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { DebugPanel, isDebugEnabled, type DebugState } from '@/components/DebugPanel';
 import { isYouTubeSupported } from '@/lib/platform';
 
 const Index = () => {
@@ -27,6 +28,16 @@ const Index = () => {
   const [musicEnabled, setMusicEnabled] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const youtubeAvailable = isYouTubeSupported();
+
+  // ----- Debug mode (URL ?debug=1) — drives YouTube only, leaves real timer alone -----
+  const debugEnabled = isDebugEnabled();
+  const [debugMode, setDebugMode] = useState<'focus' | 'break'>('focus');
+  const [debugRunning, setDebugRunning] = useState(false);
+  const [ytStatus, setYtStatus] = useState<{ ready: boolean; playerState: string; lastUrl: string }>({
+    ready: false,
+    playerState: 'idle',
+    lastUrl: '',
+  });
 
   const useYouTubeNow =
     youtubeAvailable &&
@@ -246,10 +257,52 @@ const Index = () => {
       {youtubeAvailable && (
         <ErrorBoundary label="YouTubePlayer" fallback={null}>
           <YouTubePlayer
-            url={youtubeUrl}
-            shouldPlay={pomodoro.isRunning && musicEnabled && useYouTubeNow}
+            url={debugEnabled
+              ? (debugMode === 'focus'
+                  ? audioSettings.settings.youtubeFocusUrl
+                  : audioSettings.settings.youtubeBreakUrl)
+              : youtubeUrl}
+            shouldPlay={debugEnabled
+              ? debugRunning
+              : pomodoro.isRunning && musicEnabled && useYouTubeNow}
             volume={audioSettings.settings.volume}
-            visible={useYouTubeNow && !!youtubeUrl}
+            visible={debugEnabled
+              ? !!(debugMode === 'focus'
+                  ? audioSettings.settings.youtubeFocusUrl
+                  : audioSettings.settings.youtubeBreakUrl)
+              : useYouTubeNow && !!youtubeUrl}
+            onStatus={debugEnabled ? setYtStatus : undefined}
+          />
+        </ErrorBoundary>
+      )}
+
+      {debugEnabled && (
+        <ErrorBoundary label="DebugPanel" fallback={null}>
+          <DebugPanel
+            state={{
+              mode: debugMode,
+              isRunning: debugRunning,
+              ytReady: ytStatus.ready,
+              ytPlayerState: ytStatus.playerState,
+              ytLastUrl: ytStatus.lastUrl,
+            } satisfies DebugState}
+            onSetMode={(m) => setDebugMode(m)}
+            onToggleRunning={() => setDebugRunning((v) => !v)}
+            onSimulateCycle={async () => {
+              // Focus → playing
+              setDebugMode('focus');
+              setDebugRunning(true);
+              await new Promise((r) => setTimeout(r, 1500));
+              // Switch to Break → should swap source if URL differs, keep playing
+              setDebugMode('break');
+              await new Promise((r) => setTimeout(r, 1500));
+              // Pause (simulating user pause / between sessions)
+              setDebugRunning(false);
+              await new Promise((r) => setTimeout(r, 1000));
+              // Back to Focus → resume
+              setDebugMode('focus');
+              setDebugRunning(true);
+            }}
           />
         </ErrorBoundary>
       )}
