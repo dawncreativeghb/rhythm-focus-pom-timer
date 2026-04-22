@@ -54,21 +54,18 @@ interface YouTubePlayerProps {
 
 /**
  * Small, visible YouTube player (required by YouTube ToS).
- * Mounts once a URL is provided and stays mounted across mode changes so
- * playback position is preserved (just paused) during breaks.
- * `visible` only controls whether the player is shown on screen.
+ * Mounts when `visible` is true. Plays/pauses based on `shouldPlay`.
+ * Reloads the video only when `url` changes.
  */
 export function YouTubePlayer({ url, shouldPlay, volume, visible }: YouTubePlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<YTPlayer | null>(null);
   const [ready, setReady] = useState(false);
   const lastLoadedRef = useRef<string>('');
-  const hasUrl = !!(parseYouTubeId(url) || parseYouTubePlaylistId(url));
 
-  // Init once we have a URL; do NOT destroy on visibility changes
+  // Init / destroy
   useEffect(() => {
-    if (!hasUrl) return;
-    if (playerRef.current) return;
+    if (!visible) return;
     let cancelled = false;
 
     loadYouTubeApi().then(() => {
@@ -100,9 +97,16 @@ export function YouTubePlayer({ url, shouldPlay, volume, visible }: YouTubePlaye
 
     return () => {
       cancelled = true;
+      try {
+        playerRef.current?.destroy();
+      } catch {
+        // ignore
+      }
+      playerRef.current = null;
+      setReady(false);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasUrl]);
+  }, [visible]);
 
   // Volume sync
   useEffect(() => {
@@ -143,18 +147,14 @@ export function YouTubePlayer({ url, shouldPlay, volume, visible }: YouTubePlaye
     }
   }, [shouldPlay, ready]);
 
-  // Always render the container so the YT iframe stays mounted; just hide it
-  // visually when not active for the current mode. This preserves playback
-  // position across focus/break transitions.
+  if (!visible) return null;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: visible ? 1 : 0, y: visible ? 0 : 10 }}
-      style={{ pointerEvents: visible ? 'auto' : 'none' }}
-      aria-hidden={!visible}
-      className={`fixed bottom-4 right-4 z-30 w-[280px] overflow-hidden rounded-lg border border-border/50 bg-card shadow-lg sm:w-[320px] ${
-        visible ? '' : 'invisible'
-      }`}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 10 }}
+      className="fixed bottom-4 right-4 z-30 w-[280px] overflow-hidden rounded-lg border border-border/50 bg-card shadow-lg sm:w-[320px]"
       aria-label="YouTube player"
     >
       <div className="aspect-video w-full">
