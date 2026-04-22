@@ -1,11 +1,12 @@
 import { useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings, Upload, Volume2, Trash2, Music, Bell, X, Loader2, ExternalLink } from 'lucide-react';
+import { Settings, Upload, Volume2, Trash2, Music, Bell, X, Loader2, ExternalLink, Youtube } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { isYouTubeSupported } from '@/lib/platform';
 import type { AudioSettings } from '@/hooks/useAudioSettings';
 
 // Convert a Spotify share URL (https://open.spotify.com/playlist/ID?si=...)
@@ -48,6 +49,10 @@ interface AudioSettingsModalProps {
   onSetSpotifyBreakUri: (uri: string) => void;
   onToggleUseSpotifyForFocus: () => void;
   onToggleUseSpotifyForBreak: () => void;
+  onSetYouTubeFocusUrl: (url: string) => void;
+  onSetYouTubeBreakUrl: (url: string) => void;
+  onToggleUseYouTubeForFocus: () => void;
+  onToggleUseYouTubeForBreak: () => void;
   spotify: SpotifyState;
 }
 
@@ -144,8 +149,13 @@ export function AudioSettingsModal({
   onSetSpotifyBreakUri,
   onToggleUseSpotifyForFocus,
   onToggleUseSpotifyForBreak,
+  onSetYouTubeFocusUrl,
+  onSetYouTubeBreakUrl,
+  onToggleUseYouTubeForFocus,
+  onToggleUseYouTubeForBreak,
   spotify,
 }: AudioSettingsModalProps) {
+  const youtubeAvailable = isYouTubeSupported();
   return (
     <AnimatePresence>
       {isOpen && (
