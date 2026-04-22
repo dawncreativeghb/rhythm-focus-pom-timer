@@ -56,7 +56,18 @@ interface YouTubePlayerProps {
   shouldPlay: boolean;
   volume: number; // 0..1
   visible: boolean;
+  /** Optional status callback for debug/telemetry. */
+  onStatus?: (status: { ready: boolean; playerState: string; lastUrl: string }) => void;
 }
+
+const YT_STATE_LABELS: Record<number, string> = {
+  [-1]: 'unstarted',
+  0: 'ended',
+  1: 'playing',
+  2: 'paused',
+  3: 'buffering',
+  5: 'cued',
+};
 
 /**
  * Small YouTube player (visibility required by YouTube ToS).
@@ -71,12 +82,18 @@ interface YouTubePlayerProps {
  *   • All YT API calls are guarded with try/catch so a flaky API call never
  *     bubbles up and breaks the timer UI.
  */
-export function YouTubePlayer({ url, shouldPlay, volume, visible }: YouTubePlayerProps) {
+export function YouTubePlayer({ url, shouldPlay, volume, visible, onStatus }: YouTubePlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<YTPlayer | null>(null);
   const [ready, setReady] = useState(false);
+  const [playerStateLabel, setPlayerStateLabel] = useState<string>('idle');
   const lastLoadedRef = useRef<string>('');
   const initFailedRef = useRef(false);
+
+  // Report status upward whenever it changes.
+  useEffect(() => {
+    onStatus?.({ ready, playerState: playerStateLabel, lastUrl: lastLoadedRef.current });
+  }, [ready, playerStateLabel, onStatus]);
 
   // Init once — player is kept alive across mode switches.
   useEffect(() => {
@@ -100,8 +117,13 @@ export function YouTubePlayer({ url, shouldPlay, volume, visible }: YouTubePlaye
                 if (cancelled) return;
                 setReady(true);
               },
+              onStateChange: (e: { data: number }) => {
+                if (cancelled) return;
+                setPlayerStateLabel(YT_STATE_LABELS[e.data] ?? `state:${e.data}`);
+              },
               onError: (e: { data?: number }) => {
                 console.warn('[YouTubePlayer] player error', e?.data);
+                setPlayerStateLabel(`error:${e?.data ?? '?'}`);
               },
             },
           });
