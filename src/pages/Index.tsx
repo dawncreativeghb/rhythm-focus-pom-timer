@@ -58,10 +58,21 @@ const Index = () => {
     isRunning: pomodoro.isRunning && musicEnabled && !useSpotifyNow && !useYouTubeNow,
   });
 
-  const youtubeUrl =
+  // Sticky YouTube URL: only swap source when the *active* mode actually
+  // wants YouTube AND has a URL configured. Otherwise keep the previous URL
+  // loaded so resuming after a break is just a playVideo() call (preserves
+  // position, avoids re-cue races that previously broke playback).
+  const focusYt = audioSettings.settings.youtubeFocusUrl;
+  const breakYt = audioSettings.settings.youtubeBreakUrl;
+  const desiredYoutubeUrl =
     pomodoro.mode === 'focus'
-      ? audioSettings.settings.youtubeFocusUrl
-      : audioSettings.settings.youtubeBreakUrl;
+      ? (audioSettings.settings.useYouTubeForFocus ? focusYt : '')
+      : (audioSettings.settings.useYouTubeForBreak ? breakYt : '');
+  const stickyYoutubeUrlRef = useRef<string>('');
+  if (desiredYoutubeUrl && desiredYoutubeUrl !== stickyYoutubeUrlRef.current) {
+    stickyYoutubeUrlRef.current = desiredYoutubeUrl;
+  }
+  const youtubeUrl = stickyYoutubeUrlRef.current;
 
   // Spotify volume sync
   useEffect(() => {

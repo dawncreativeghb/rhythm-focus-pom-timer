@@ -89,6 +89,10 @@ export function YouTubePlayer({ url, shouldPlay, volume, visible, onStatus }: Yo
   const [playerStateLabel, setPlayerStateLabel] = useState<string>('idle');
   const lastLoadedRef = useRef<string>('');
   const initFailedRef = useRef(false);
+  // Latest shouldPlay — read inside event callbacks so we can auto-play
+  // once the player reaches the CUED state after a source swap.
+  const shouldPlayRef = useRef(shouldPlay);
+  useEffect(() => { shouldPlayRef.current = shouldPlay; }, [shouldPlay]);
 
   // Report status upward whenever it changes.
   useEffect(() => {
@@ -104,7 +108,6 @@ export function YouTubePlayer({ url, shouldPlay, volume, visible, onStatus }: Yo
         if (cancelled || !containerRef.current || !window.YT) return;
         try {
           playerRef.current = new window.YT.Player(containerRef.current, {
-            // No initial videoId — we cue/load when the user provides a URL.
             playerVars: {
               autoplay: 0,
               controls: 1,
@@ -119,7 +122,14 @@ export function YouTubePlayer({ url, shouldPlay, volume, visible, onStatus }: Yo
               },
               onStateChange: (e: { data: number }) => {
                 if (cancelled) return;
-                setPlayerStateLabel(YT_STATE_LABELS[e.data] ?? `state:${e.data}`);
+                const label = YT_STATE_LABELS[e.data] ?? `state:${e.data}`;
+                setPlayerStateLabel(label);
+                // If a source was just cued and the user wants to play,
+                // kick playback now (avoids race where playVideo() was
+                // called before the new source was ready).
+                if (e.data === 5 /* CUED */ && shouldPlayRef.current) {
+                  try { playerRef.current?.playVideo(); } catch { /* ignore */ }
+                }
               },
               onError: (e: { data?: number }) => {
                 console.warn('[YouTubePlayer] player error', e?.data);
@@ -159,34 +169,45 @@ export function YouTubePlayer({ url, shouldPlay, volume, visible, onStatus }: Yo
     }
   }, [volume, ready]);
 
-  // Source swap — only when URL actually changes.
-  // Use cue* (not load*) so we don't auto-play; the play/pause effect handles playback.
+  // Source swap — only when URL actually changes AND non-empty.
+  // Use load* when we want to play immediately, cue* otherwise. This avoids
+  // the cue→play race that previously left the player stuck on resume.
   useEffect(() => {
     if (!ready || !playerRef.current) return;
+    if (!url) return; // keep previous source loaded
     if (url === lastLoadedRef.current) return;
     const id = parseYouTubeId(url);
     const playlist = parseYouTubePlaylistId(url);
     try {
       if (playlist) {
-        playerRef.current.cuePlaylist({ list: playlist, listType: 'playlist' });
+        if (shouldPlayRef.current) {
+          playerRef.current.loadPlaylist({ list: playlist, listType: 'playlist' });
+        } else {
+          playerRef.current.cuePlaylist({ list: playlist, listType: 'playlist' });
+        }
         lastLoadedRef.current = url;
       } else if (id) {
-        playerRef.current.cueVideoById(id);
+        if (shouldPlayRef.current) {
+          playerRef.current.loadVideoById(id);
+        } else {
+          playerRef.current.cueVideoById(id);
+        }
         lastLoadedRef.current = url;
-      } else {
-        // Invalid URL — leave previous source alone.
       }
     } catch (err) {
-      console.warn('[YouTubePlayer] cue failed', err);
+      console.warn('[YouTubePlayer] cue/load failed', err);
     }
   }, [url, ready]);
 
-  // Play / pause
+  // Play / pause — drives playback for same-URL transitions (resume after break).
   useEffect(() => {
     if (!ready || !playerRef.current) return;
     try {
-      if (shouldPlay) playerRef.current.playVideo();
-      else playerRef.current.pauseVideo();
+      if (shouldPlay) {
+        playerRef.current.playVideo();
+      } else {
+        playerRef.current.pauseVideo();
+      }
     } catch (err) {
       console.warn('[YouTubePlayer] play/pause failed', err);
     }
