@@ -10,6 +10,8 @@ import { ControlButton } from '@/components/ControlButton';
 import { MusicToggle } from '@/components/MusicToggle';
 import { AudioSettingsModal } from '@/components/AudioSettingsModal';
 import { ModeSwitcher } from '@/components/ModeSwitcher';
+import { YouTubePlayer } from '@/components/YouTubePlayer';
+import { isYouTubeSupported } from '@/lib/platform';
 
 const Index = () => {
   const pomodoro = usePomodoro({
@@ -23,18 +25,31 @@ const Index = () => {
   const spotify = useSpotify();
   const [musicEnabled, setMusicEnabled] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const youtubeAvailable = isYouTubeSupported();
+
+  const useYouTubeNow =
+    youtubeAvailable &&
+    (pomodoro.mode === 'focus'
+      ? audioSettings.settings.useYouTubeForFocus
+      : audioSettings.settings.useYouTubeForBreak);
 
   const useSpotifyNow =
-    pomodoro.mode === 'focus'
+    !useYouTubeNow &&
+    (pomodoro.mode === 'focus'
       ? audioSettings.settings.useSpotifyForFocus
-      : audioSettings.settings.useSpotifyForBreak;
+      : audioSettings.settings.useSpotifyForBreak);
 
-  // Local audio playback (only when not using Spotify for current mode)
+  // Local audio playback (only when neither Spotify nor YouTube is active)
   useAudioPlayer({
     settings: audioSettings.settings,
     mode: pomodoro.mode,
-    isRunning: pomodoro.isRunning && musicEnabled && !useSpotifyNow,
+    isRunning: pomodoro.isRunning && musicEnabled && !useSpotifyNow && !useYouTubeNow,
   });
+
+  const youtubeUrl =
+    pomodoro.mode === 'focus'
+      ? audioSettings.settings.youtubeFocusUrl
+      : audioSettings.settings.youtubeBreakUrl;
 
   // Spotify volume sync
   useEffect(() => {
@@ -211,6 +226,10 @@ const Index = () => {
         onSetSpotifyBreakUri={audioSettings.setSpotifyBreakUri}
         onToggleUseSpotifyForFocus={audioSettings.toggleUseSpotifyForFocus}
         onToggleUseSpotifyForBreak={audioSettings.toggleUseSpotifyForBreak}
+        onSetYouTubeFocusUrl={audioSettings.setYouTubeFocusUrl}
+        onSetYouTubeBreakUrl={audioSettings.setYouTubeBreakUrl}
+        onToggleUseYouTubeForFocus={audioSettings.toggleUseYouTubeForFocus}
+        onToggleUseYouTubeForBreak={audioSettings.toggleUseYouTubeForBreak}
         spotify={{
           isConnected: spotify.isConnected,
           isPremium: spotify.isPremium,
@@ -222,6 +241,15 @@ const Index = () => {
           disconnect: spotify.disconnect,
         }}
       />
+
+      {youtubeAvailable && (
+        <YouTubePlayer
+          url={youtubeUrl}
+          shouldPlay={pomodoro.isRunning && musicEnabled && useYouTubeNow}
+          volume={audioSettings.settings.volume}
+          visible={useYouTubeNow && !!youtubeUrl}
+        />
+      )}
     </main>
   );
 };

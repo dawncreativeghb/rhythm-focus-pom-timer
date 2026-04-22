@@ -1,11 +1,12 @@
 import { useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings, Upload, Volume2, Trash2, Music, Bell, X, Loader2, ExternalLink } from 'lucide-react';
+import { Settings, Upload, Volume2, Trash2, Music, Bell, X, Loader2, ExternalLink, Youtube } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { isYouTubeSupported } from '@/lib/platform';
 import type { AudioSettings } from '@/hooks/useAudioSettings';
 
 // Convert a Spotify share URL (https://open.spotify.com/playlist/ID?si=...)
@@ -48,6 +49,10 @@ interface AudioSettingsModalProps {
   onSetSpotifyBreakUri: (uri: string) => void;
   onToggleUseSpotifyForFocus: () => void;
   onToggleUseSpotifyForBreak: () => void;
+  onSetYouTubeFocusUrl: (url: string) => void;
+  onSetYouTubeBreakUrl: (url: string) => void;
+  onToggleUseYouTubeForFocus: () => void;
+  onToggleUseYouTubeForBreak: () => void;
   spotify: SpotifyState;
 }
 
@@ -144,8 +149,13 @@ export function AudioSettingsModal({
   onSetSpotifyBreakUri,
   onToggleUseSpotifyForFocus,
   onToggleUseSpotifyForBreak,
+  onSetYouTubeFocusUrl,
+  onSetYouTubeBreakUrl,
+  onToggleUseYouTubeForFocus,
+  onToggleUseYouTubeForBreak,
   spotify,
 }: AudioSettingsModalProps) {
+  const youtubeAvailable = isYouTubeSupported();
   return (
     <AnimatePresence>
       {isOpen && (
@@ -276,6 +286,60 @@ export function AudioSettingsModal({
                   </div>
                 )}
               </div>
+
+              {/* YouTube — desktop web only */}
+              {youtubeAvailable && (
+                <div className="flex flex-col gap-3 rounded-lg border border-primary/30 bg-secondary/50 p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#FF0000]/20 text-[#FF0000]">
+                      <Youtube className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground">YouTube</p>
+                      <p className="text-xs text-muted-foreground">Desktop only • visible mini player</p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-3 border-t border-border/50 pt-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <Label className="text-xs">Use YouTube for Focus</Label>
+                      <Switch
+                        checked={settings.useYouTubeForFocus}
+                        onCheckedChange={onToggleUseYouTubeForFocus}
+                      />
+                    </div>
+                    {settings.useYouTubeForFocus && (
+                      <Input
+                        placeholder="Paste YouTube link (video or playlist)"
+                        value={settings.youtubeFocusUrl}
+                        onChange={(e) => onSetYouTubeFocusUrl(e.target.value)}
+                        className="text-xs"
+                      />
+                    )}
+
+                    <div className="flex items-center justify-between gap-2">
+                      <Label className="text-xs">Use YouTube for Break</Label>
+                      <Switch
+                        checked={settings.useYouTubeForBreak}
+                        onCheckedChange={onToggleUseYouTubeForBreak}
+                      />
+                    </div>
+                    {settings.useYouTubeForBreak && (
+                      <Input
+                        placeholder="Paste YouTube link (video or playlist)"
+                        value={settings.youtubeBreakUrl}
+                        onChange={(e) => onSetYouTubeBreakUrl(e.target.value)}
+                        className="text-xs"
+                      />
+                    )}
+
+                    <p className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                      <ExternalLink className="h-3 w-3" />
+                      Lofi livestreams, playlists, or any YouTube video URL works
+                    </p>
+                  </div>
+                </div>
+              )}
 
               <FileUploadRow
                 label="Focus Music"

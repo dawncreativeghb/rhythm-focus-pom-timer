@@ -12,6 +12,10 @@ export interface AudioSettings {
   spotifyBreakUri: string;
   useSpotifyForFocus: boolean;
   useSpotifyForBreak: boolean;
+  youtubeFocusUrl: string;
+  youtubeBreakUrl: string;
+  useYouTubeForFocus: boolean;
+  useYouTubeForBreak: boolean;
 }
 
 export interface AudioFile {
@@ -34,6 +38,10 @@ const DEFAULT_SETTINGS: AudioSettings = {
   spotifyBreakUri: '',
   useSpotifyForFocus: false,
   useSpotifyForBreak: false,
+  youtubeFocusUrl: '',
+  youtubeBreakUrl: '',
+  useYouTubeForFocus: false,
+  useYouTubeForBreak: false,
 };
 
 // Helper to convert File to base64 for localStorage persistence
@@ -147,6 +155,22 @@ export function useAudioSettings() {
     setSettings(prev => ({ ...prev, useSpotifyForBreak: !prev.useSpotifyForBreak }));
   }, []);
 
+  const setYouTubeFocusUrl = useCallback((url: string) => {
+    setSettings(prev => ({ ...prev, youtubeFocusUrl: url }));
+  }, []);
+
+  const setYouTubeBreakUrl = useCallback((url: string) => {
+    setSettings(prev => ({ ...prev, youtubeBreakUrl: url }));
+  }, []);
+
+  const toggleUseYouTubeForFocus = useCallback(() => {
+    setSettings(prev => ({ ...prev, useYouTubeForFocus: !prev.useYouTubeForFocus }));
+  }, []);
+
+  const toggleUseYouTubeForBreak = useCallback(() => {
+    setSettings(prev => ({ ...prev, useYouTubeForBreak: !prev.useYouTubeForBreak }));
+  }, []);
+
   return {
     settings,
     isLoaded,
@@ -162,5 +186,9 @@ export function useAudioSettings() {
     setSpotifyBreakUri,
     toggleUseSpotifyForFocus,
     toggleUseSpotifyForBreak,
+    setYouTubeFocusUrl,
+    setYouTubeBreakUrl,
+    toggleUseYouTubeForFocus,
+    toggleUseYouTubeForBreak,
   };
 }
