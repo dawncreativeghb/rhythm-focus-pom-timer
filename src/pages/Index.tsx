@@ -11,6 +11,7 @@ import { MusicToggle } from '@/components/MusicToggle';
 import { AudioSettingsModal } from '@/components/AudioSettingsModal';
 import { ModeSwitcher } from '@/components/ModeSwitcher';
 import { YouTubePlayer } from '@/components/YouTubePlayer';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { isYouTubeSupported } from '@/lib/platform';
 
 const Index = () => {
@@ -243,12 +244,14 @@ const Index = () => {
       />
 
       {youtubeAvailable && (
-        <YouTubePlayer
-          url={youtubeUrl}
-          shouldPlay={pomodoro.isRunning && musicEnabled && useYouTubeNow}
-          volume={audioSettings.settings.volume}
-          visible={useYouTubeNow && !!youtubeUrl}
-        />
+        <ErrorBoundary label="YouTubePlayer" fallback={null}>
+          <YouTubePlayer
+            url={youtubeUrl}
+            shouldPlay={pomodoro.isRunning && musicEnabled && useYouTubeNow}
+            volume={audioSettings.settings.volume}
+            visible={useYouTubeNow && !!youtubeUrl}
+          />
+        </ErrorBoundary>
       )}
     </main>
   );

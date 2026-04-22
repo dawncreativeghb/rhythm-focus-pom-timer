@@ -6,8 +6,11 @@ import { parseYouTubeId, parseYouTubePlaylistId } from '@/lib/platform';
 type YTPlayer = {
   playVideo: () => void;
   pauseVideo: () => void;
+  stopVideo?: () => void;
   setVolume: (v: number) => void;
+  cueVideoById: (id: string) => void;
   loadVideoById: (id: string) => void;
+  cuePlaylist: (opts: { list: string; listType: string }) => void;
   loadPlaylist: (opts: { list: string; listType: string }) => void;
   destroy: () => void;
   getPlayerState?: () => number;
@@ -20,7 +23,7 @@ declare global {
         el: HTMLElement | string,
         opts: Record<string, unknown>
       ) => YTPlayer;
-      PlayerState: { PLAYING: number; PAUSED: number; ENDED: number };
+      PlayerState: { PLAYING: number; PAUSED: number; ENDED: number; CUED: number; BUFFERING: number };
     };
     onYouTubeIframeAPIReady?: () => void;
   }
@@ -40,6 +43,9 @@ function loadYouTubeApi(): Promise<void> {
     };
     const tag = document.createElement('script');
     tag.src = 'https://www.youtube.com/iframe_api';
+    tag.onerror = () => {
+      console.error('[YouTubePlayer] failed to load IFrame API');
+    };
     document.head.appendChild(tag);
   });
   return apiLoadingPromise;
@@ -53,60 +59,73 @@ interface YouTubePlayerProps {
 }
 
 /**
- * Small, visible YouTube player (required by YouTube ToS).
- * Mounts when `visible` is true. Plays/pauses based on `shouldPlay`.
- * Reloads the video only when `url` changes.
+ * Small YouTube player (visibility required by YouTube ToS).
+ *
+ * Stability strategy (different from previous unmount-on-mode-switch approach):
+ *   • Player instance is created ONCE on first mount and kept alive for the
+ *     lifetime of the component — we never destroy it on mode switches.
+ *   • Visibility is controlled with CSS (hide off-screen) so the iframe and
+ *     its internal state survive focus→break→focus transitions.
+ *   • Source is only swapped when the URL truly changes; same URL across
+ *     mode switches just calls pause/play, preserving playback position.
+ *   • All YT API calls are guarded with try/catch so a flaky API call never
+ *     bubbles up and breaks the timer UI.
  */
 export function YouTubePlayer({ url, shouldPlay, volume, visible }: YouTubePlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<YTPlayer | null>(null);
   const [ready, setReady] = useState(false);
   const lastLoadedRef = useRef<string>('');
+  const initFailedRef = useRef(false);
 
-  // Init / destroy
+  // Init once — player is kept alive across mode switches.
   useEffect(() => {
-    if (!visible) return;
     let cancelled = false;
 
-    loadYouTubeApi().then(() => {
-      if (cancelled || !containerRef.current || !window.YT) return;
-      const id = parseYouTubeId(url);
-      const playlist = parseYouTubePlaylistId(url);
-      // Need at least an ID or playlist to start; otherwise create empty player
-      const startId = id || 'M7lc1UVf-VE'; // placeholder; will be overridden when user pastes URL
-
-      playerRef.current = new window.YT.Player(containerRef.current, {
-        videoId: startId,
-        playerVars: {
-          autoplay: 0,
-          controls: 1,
-          modestbranding: 1,
-          rel: 0,
-          playsinline: 1,
-          ...(playlist ? { list: playlist, listType: 'playlist' } : {}),
-        },
-        events: {
-          onReady: () => {
-            if (cancelled) return;
-            setReady(true);
-            lastLoadedRef.current = url;
-          },
-        },
+    loadYouTubeApi()
+      .then(() => {
+        if (cancelled || !containerRef.current || !window.YT) return;
+        try {
+          playerRef.current = new window.YT.Player(containerRef.current, {
+            // No initial videoId — we cue/load when the user provides a URL.
+            playerVars: {
+              autoplay: 0,
+              controls: 1,
+              modestbranding: 1,
+              rel: 0,
+              playsinline: 1,
+            },
+            events: {
+              onReady: () => {
+                if (cancelled) return;
+                setReady(true);
+              },
+              onError: (e: { data?: number }) => {
+                console.warn('[YouTubePlayer] player error', e?.data);
+              },
+            },
+          });
+        } catch (err) {
+          initFailedRef.current = true;
+          console.error('[YouTubePlayer] init failed', err);
+        }
+      })
+      .catch((err) => {
+        initFailedRef.current = true;
+        console.error('[YouTubePlayer] API load failed', err);
       });
-    });
 
     return () => {
       cancelled = true;
       try {
         playerRef.current?.destroy();
       } catch {
-        // ignore
+        // ignore — destroying mid-load can throw
       }
       playerRef.current = null;
       setReady(false);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible]);
+  }, []);
 
   // Volume sync
   useEffect(() => {
@@ -118,7 +137,8 @@ export function YouTubePlayer({ url, shouldPlay, volume, visible }: YouTubePlaye
     }
   }, [volume, ready]);
 
-  // URL change → reload
+  // Source swap — only when URL actually changes.
+  // Use cue* (not load*) so we don't auto-play; the play/pause effect handles playback.
   useEffect(() => {
     if (!ready || !playerRef.current) return;
     if (url === lastLoadedRef.current) return;
@@ -126,13 +146,16 @@ export function YouTubePlayer({ url, shouldPlay, volume, visible }: YouTubePlaye
     const playlist = parseYouTubePlaylistId(url);
     try {
       if (playlist) {
-        playerRef.current.loadPlaylist({ list: playlist, listType: 'playlist' });
+        playerRef.current.cuePlaylist({ list: playlist, listType: 'playlist' });
+        lastLoadedRef.current = url;
       } else if (id) {
-        playerRef.current.loadVideoById(id);
+        playerRef.current.cueVideoById(id);
+        lastLoadedRef.current = url;
+      } else {
+        // Invalid URL — leave previous source alone.
       }
-      lastLoadedRef.current = url;
-    } catch {
-      // ignore
+    } catch (err) {
+      console.warn('[YouTubePlayer] cue failed', err);
     }
   }, [url, ready]);
 
@@ -142,19 +165,20 @@ export function YouTubePlayer({ url, shouldPlay, volume, visible }: YouTubePlaye
     try {
       if (shouldPlay) playerRef.current.playVideo();
       else playerRef.current.pauseVideo();
-    } catch {
-      // ignore
+    } catch (err) {
+      console.warn('[YouTubePlayer] play/pause failed', err);
     }
   }, [shouldPlay, ready]);
 
-  if (!visible) return null;
-
+  // Always render the container so the player stays mounted; toggle visibility via CSS.
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 10 }}
+      animate={visible ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}
+      transition={{ duration: 0.2 }}
       className="fixed bottom-4 right-4 z-30 w-[280px] overflow-hidden rounded-lg border border-border/50 bg-card shadow-lg sm:w-[320px]"
+      style={{ pointerEvents: visible ? 'auto' : 'none' }}
+      aria-hidden={!visible}
       aria-label="YouTube player"
     >
       <div className="aspect-video w-full">
