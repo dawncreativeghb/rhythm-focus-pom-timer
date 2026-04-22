@@ -82,12 +82,18 @@ const YT_STATE_LABELS: Record<number, string> = {
  *   • All YT API calls are guarded with try/catch so a flaky API call never
  *     bubbles up and breaks the timer UI.
  */
-export function YouTubePlayer({ url, shouldPlay, volume, visible }: YouTubePlayerProps) {
+export function YouTubePlayer({ url, shouldPlay, volume, visible, onStatus }: YouTubePlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<YTPlayer | null>(null);
   const [ready, setReady] = useState(false);
+  const [playerStateLabel, setPlayerStateLabel] = useState<string>('idle');
   const lastLoadedRef = useRef<string>('');
   const initFailedRef = useRef(false);
+
+  // Report status upward whenever it changes.
+  useEffect(() => {
+    onStatus?.({ ready, playerState: playerStateLabel, lastUrl: lastLoadedRef.current });
+  }, [ready, playerStateLabel, onStatus]);
 
   // Init once — player is kept alive across mode switches.
   useEffect(() => {
@@ -111,8 +117,13 @@ export function YouTubePlayer({ url, shouldPlay, volume, visible }: YouTubePlaye
                 if (cancelled) return;
                 setReady(true);
               },
+              onStateChange: (e: { data: number }) => {
+                if (cancelled) return;
+                setPlayerStateLabel(YT_STATE_LABELS[e.data] ?? `state:${e.data}`);
+              },
               onError: (e: { data?: number }) => {
                 console.warn('[YouTubePlayer] player error', e?.data);
+                setPlayerStateLabel(`error:${e?.data ?? '?'}`);
               },
             },
           });
