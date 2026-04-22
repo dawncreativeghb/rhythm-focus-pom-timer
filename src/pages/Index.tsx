@@ -10,6 +10,8 @@ import { ControlButton } from '@/components/ControlButton';
 import { MusicToggle } from '@/components/MusicToggle';
 import { AudioSettingsModal } from '@/components/AudioSettingsModal';
 import { ModeSwitcher } from '@/components/ModeSwitcher';
+import { YouTubePlayer } from '@/components/YouTubePlayer';
+import { isYouTubeSupported } from '@/lib/platform';
 
 const Index = () => {
   const pomodoro = usePomodoro({
