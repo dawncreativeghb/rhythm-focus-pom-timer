@@ -46,7 +46,6 @@ export function TimerRing({ progress, mode, isRunning, formattedTime, timeRemain
       <svg
         width={size}
         height={size}
-        className="transform -rotate-90"
         aria-hidden="true"
       >
         <circle
@@ -58,8 +57,8 @@ export function TimerRing({ progress, mode, isRunning, formattedTime, timeRemain
           strokeWidth={strokeWidth}
           className="opacity-30"
         />
-        
-        {/* Progress ring */}
+
+        {/* Progress ring — full circle that shrinks counter-clockwise as time elapses */}
         <motion.circle
           cx={size / 2}
           cy={size / 2}
@@ -68,10 +67,11 @@ export function TimerRing({ progress, mode, isRunning, formattedTime, timeRemain
           stroke={mode === 'focus' ? 'hsl(var(--primary))' : 'hsl(var(--break))'}
           strokeWidth={strokeWidth}
           strokeLinecap="round"
-          strokeDasharray={circumference}
-          initial={{ strokeDashoffset: circumference }}
-          animate={{ strokeDashoffset }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
+          // Start at 12 o'clock and sweep counter-clockwise
+          transform={`rotate(-90 ${size / 2} ${size / 2}) scale(1, -1) translate(0, ${-size})`}
+          initial={false}
+          animate={{ strokeDasharray: dashArray }}
+          transition={{ duration: 1, ease: 'linear' }}
         />
       </svg>
 
