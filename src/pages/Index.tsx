@@ -203,6 +203,8 @@ const Index = () => {
           mode={pomodoro.mode}
           isRunning={pomodoro.isRunning}
           formattedTime={pomodoro.formattedTime}
+          timeRemaining={pomodoro.timeRemaining}
+          totalTime={pomodoro.totalTime}
         />
 
         <ControlButton
