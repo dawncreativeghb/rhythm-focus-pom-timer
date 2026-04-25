@@ -126,6 +126,7 @@ export function usePomodoro(settings: PomodoroSettings = DEFAULT_SETTINGS) {
   return {
     mode,
     timeRemaining,
+    totalTime,
     isRunning,
     progress,
     sessionsCompleted,
