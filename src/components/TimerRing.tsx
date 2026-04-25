@@ -6,14 +6,21 @@ interface TimerRingProps {
   mode: TimerMode;
   isRunning: boolean;
   formattedTime: string;
+  timeRemaining?: number;
+  totalTime?: number;
 }
 
-export function TimerRing({ progress, mode, isRunning, formattedTime }: TimerRingProps) {
+export function TimerRing({ progress, mode, isRunning, formattedTime, timeRemaining, totalTime }: TimerRingProps) {
   const size = 280;
   const strokeWidth = 6;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference * (1 - progress);
+  // Remaining fraction (1 = full circle, 0 = empty). Prefer second-precision values for smoothing.
+  const remainingFraction = totalTime && totalTime > 0 && typeof timeRemaining === 'number'
+    ? Math.max(0, Math.min(1, timeRemaining / totalTime))
+    : Math.max(0, Math.min(1, 1 - progress));
+  // Visible arc length = remaining fraction of full circumference; rest is dashed offscreen.
+  const dashArray = `${circumference * remainingFraction} ${circumference}`;
 
   return (
     <div className="relative flex items-center justify-center">
