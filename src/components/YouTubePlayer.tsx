@@ -179,18 +179,21 @@ export function YouTubePlayer({ url, shouldPlay, volume, visible, onStatus }: Yo
     const id = parseYouTubeId(url);
     const playlist = parseYouTubePlaylistId(url);
     try {
-      if (playlist) {
-        if (shouldPlayRef.current) {
-          playerRef.current.loadPlaylist({ list: playlist, listType: 'playlist' });
-        } else {
-          playerRef.current.cuePlaylist({ list: playlist, listType: 'playlist' });
-        }
-        lastLoadedRef.current = url;
-      } else if (id) {
+      // Prefer a specific video ID over a playlist. A URL like
+      // `watch?v=VIDEOID&list=PLAYLISTID` should play the requested video,
+      // not the first video in the playlist (which felt "random" to users).
+      if (id) {
         if (shouldPlayRef.current) {
           playerRef.current.loadVideoById(id);
         } else {
           playerRef.current.cueVideoById(id);
+        }
+        lastLoadedRef.current = url;
+      } else if (playlist) {
+        if (shouldPlayRef.current) {
+          playerRef.current.loadPlaylist({ list: playlist, listType: 'playlist' });
+        } else {
+          playerRef.current.cuePlaylist({ list: playlist, listType: 'playlist' });
         }
         lastLoadedRef.current = url;
       }
