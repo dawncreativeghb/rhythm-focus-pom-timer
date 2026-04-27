@@ -76,18 +76,7 @@ export function useAudioPlayer({ settings, mode, isRunning }: UseAudioPlayerOpti
       breakAudioRef.current = null;
     }
 
-    // Break chime
-    if (settings.breakChime?.url) {
-      if (!chimeAudioRef.current) {
-        chimeAudioRef.current = new Audio();
-      }
-      if (chimeAudioRef.current.src !== settings.breakChime.url) {
-        chimeAudioRef.current.src = settings.breakChime.url;
-      }
-    } else if (chimeAudioRef.current) {
-      chimeAudioRef.current = null;
-    }
-  }, [settings.focusMusic?.url, settings.breakMusic?.url, settings.breakChime?.url]);
+  }, [settings.focusMusic?.url, settings.breakMusic?.url]);
 
   // Update volume when settings change
   useEffect(() => {
@@ -97,22 +86,18 @@ export function useAudioPlayer({ settings, mode, isRunning }: UseAudioPlayerOpti
     if (breakAudioRef.current) {
       breakAudioRef.current.volume = settings.volume;
     }
-    if (chimeAudioRef.current) {
-      chimeAudioRef.current.volume = settings.volume;
-    }
   }, [settings.volume]);
 
   // Handle mode transitions - play chime when entering break
   useEffect(() => {
     if (previousModeRef.current === 'focus' && mode === 'break') {
       // Transitioning to break - play chime
-      if (settings.breakChimeEnabled && chimeAudioRef.current) {
-        chimeAudioRef.current.currentTime = 0;
-        chimeAudioRef.current.play().catch(console.error);
+      if (settings.breakChimeEnabled) {
+        playBuiltInChime();
       }
     }
     previousModeRef.current = mode;
-  }, [mode, settings.breakChimeEnabled]);
+  }, [mode, settings.breakChimeEnabled, playBuiltInChime]);
 
   // Handle playback based on mode and running state
   useEffect(() => {
@@ -138,11 +123,10 @@ export function useAudioPlayer({ settings, mode, isRunning }: UseAudioPlayerOpti
   }, [mode, isRunning, settings.focusMusicEnabled, settings.breakMusicEnabled]);
 
   const playChime = useCallback(() => {
-    if (settings.breakChimeEnabled && chimeAudioRef.current) {
-      chimeAudioRef.current.currentTime = 0;
-      chimeAudioRef.current.play().catch(console.error);
+    if (settings.breakChimeEnabled) {
+      playBuiltInChime();
     }
-  }, [settings.breakChimeEnabled]);
+  }, [settings.breakChimeEnabled, playBuiltInChime]);
 
   const stopAll = useCallback(() => {
     focusAudioRef.current?.pause();
