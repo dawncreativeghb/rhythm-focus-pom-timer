@@ -8,13 +8,14 @@ import { Capacitor } from '@capacitor/core';
 export function isYouTubeSupported(): boolean {
   if (typeof window === 'undefined') return false;
   try {
+    // Native iOS/Android blocks background audio for embedded YouTube.
     if (Capacitor.isNativePlatform()) return false;
   } catch {
     // Capacitor not available — treat as web
   }
-  // Require pointer:fine + min width — desktop browsers
-  const desktop = window.matchMedia('(min-width: 1024px) and (pointer: fine)').matches;
-  return desktop;
+  // Allow on any web browser (desktop + mobile web). Embedded YouTube
+  // works fine in mobile Safari/Chrome as long as the iframe is visible.
+  return true;
 }
 
 /** Extract a YouTube video ID from any common URL form, or return the input if it already looks like an ID. */
