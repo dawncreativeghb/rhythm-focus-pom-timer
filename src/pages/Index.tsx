@@ -165,7 +165,6 @@ const Index = () => {
   const hasAudioConfigured = !!(
     audioSettings.settings.focusMusic ||
     audioSettings.settings.breakMusic ||
-    audioSettings.settings.breakChime ||
     spotify.isConnected
   );
 
@@ -241,7 +240,7 @@ const Index = () => {
         onClose={() => setSettingsOpen(false)}
         settings={audioSettings.settings}
         onSetFocusMusic={audioSettings.setFocusMusic}
-        onSetBreakChime={audioSettings.setBreakChime}
+        
         onSetBreakMusic={audioSettings.setBreakMusic}
         onToggleFocusMusic={audioSettings.toggleFocusMusic}
         onToggleBreakChime={audioSettings.toggleBreakChime}

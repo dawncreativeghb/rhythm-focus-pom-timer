@@ -39,7 +39,7 @@ interface AudioSettingsModalProps {
   onClose: () => void;
   settings: AudioSettings;
   onSetFocusMusic: (file: File | null) => void;
-  onSetBreakChime: (file: File | null) => void;
+  
   onSetBreakMusic: (file: File | null) => void;
   onToggleFocusMusic: () => void;
   onToggleBreakChime: () => void;
@@ -139,7 +139,7 @@ export function AudioSettingsModal({
   onClose,
   settings,
   onSetFocusMusic,
-  onSetBreakChime,
+  
   onSetBreakMusic,
   onToggleFocusMusic,
   onToggleBreakChime,
@@ -351,15 +351,19 @@ export function AudioSettingsModal({
                 onFileSelect={(file) => onSetFocusMusic(file)}
               />
 
-              <FileUploadRow
-                label="Break Chime"
-                description="Plays when break starts"
-                icon={<Bell className="h-5 w-5" />}
-                file={settings.breakChime}
-                enabled={settings.breakChimeEnabled}
-                onToggle={onToggleBreakChime}
-                onFileSelect={(file) => onSetBreakChime(file)}
-              />
+              {/* Break chime — built-in sound, no upload */}
+              <div className="flex items-center justify-between rounded-lg bg-secondary/50 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/20 text-primary">
+                    <Bell className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-foreground">Break Chime</p>
+                    <p className="text-xs text-muted-foreground">Soft bell when a break starts</p>
+                  </div>
+                </div>
+                <Switch checked={settings.breakChimeEnabled} onCheckedChange={onToggleBreakChime} />
+              </div>
 
               <FileUploadRow
                 label="Break Music"
