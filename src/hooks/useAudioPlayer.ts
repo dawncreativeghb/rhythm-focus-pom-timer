@@ -11,8 +11,40 @@ interface UseAudioPlayerOptions {
 export function useAudioPlayer({ settings, mode, isRunning }: UseAudioPlayerOptions) {
   const focusAudioRef = useRef<HTMLAudioElement | null>(null);
   const breakAudioRef = useRef<HTMLAudioElement | null>(null);
-  const chimeAudioRef = useRef<HTMLAudioElement | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
   const previousModeRef = useRef<TimerMode>(mode);
+
+  // Built-in synthesized chime — a soft two-tone bell.
+  const playBuiltInChime = useCallback(() => {
+    try {
+      if (!audioContextRef.current) {
+        const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        audioContextRef.current = new Ctx();
+      }
+      const ctx = audioContextRef.current;
+      if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+
+      const playTone = (freq: number, startOffset: number, duration: number) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        const start = ctx.currentTime + startOffset;
+        const peak = Math.max(0.0001, settings.volume * 0.4);
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(peak, start + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(start);
+        osc.stop(start + duration + 0.05);
+      };
+
+      playTone(880, 0, 0.5);    // A5
+      playTone(1318.5, 0.18, 0.6); // E6
+    } catch (err) {
+      console.error('Chime playback failed', err);
+    }
+  }, [settings.volume]);
 
   // Create or update audio elements when settings change
   useEffect(() => {
