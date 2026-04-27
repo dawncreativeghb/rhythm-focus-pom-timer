@@ -39,7 +39,7 @@ interface AudioSettingsModalProps {
   onClose: () => void;
   settings: AudioSettings;
   onSetFocusMusic: (file: File | null) => void;
-  onSetBreakChime: (file: File | null) => void;
+  
   onSetBreakMusic: (file: File | null) => void;
   onToggleFocusMusic: () => void;
   onToggleBreakChime: () => void;
@@ -139,7 +139,7 @@ export function AudioSettingsModal({
   onClose,
   settings,
   onSetFocusMusic,
-  onSetBreakChime,
+  
   onSetBreakMusic,
   onToggleFocusMusic,
   onToggleBreakChime,
