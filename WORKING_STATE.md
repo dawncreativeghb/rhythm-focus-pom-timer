@@ -32,6 +32,16 @@ Format: `YYYY-MM-DD` — Feature ✅ (where the fix lives) — notes
     `src/hooks/useAudioPlayer.ts`; on/off switch in
     `src/components/AudioSettingsModal.tsx`.
 
+- **2026-04-29** — Full end-to-end browser test passed ✅
+  - User confirmed in desktop browser: Spotify playback, YouTube
+    playback, pause-on-break, resume-on-focus, smooth timer ring,
+    chime on/off all working together.
+  - Treat the current state of `src/pages/Index.tsx`,
+    `src/components/YouTubePlayer.tsx`, `src/hooks/useSpotify.ts`,
+    `src/hooks/usePomodoro.ts`, `src/components/TimerRing.tsx`, and
+    `src/hooks/useAudioPlayer.ts` as a known-good baseline.
+  - Next milestone: verify on iOS (Capacitor) before adding features.
+
 ---
 
 ## How to use this file (for the AI agent)
