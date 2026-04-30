@@ -27,6 +27,7 @@ declare global {
 }
 
 function getRedirectUri() {
+  if (Capacitor.isNativePlatform()) return NATIVE_REDIRECT_URI;
   return `${window.location.origin}/spotify-callback`;
 }
 
