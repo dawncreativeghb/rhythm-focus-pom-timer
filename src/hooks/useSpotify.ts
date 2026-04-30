@@ -240,6 +240,41 @@ export function useSpotify() {
     setAuth(next);
   }, []);
 
+  // Native: listen for the Spotify redirect coming back via custom URL scheme.
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    let handle: { remove: () => void } | null = null;
+    (async () => {
+      const listener = await App.addListener('appUrlOpen', async ({ url }) => {
+        if (!url || !url.startsWith(NATIVE_REDIRECT_URI)) return;
+        try {
+          const parsed = new URL(url);
+          const code = parsed.searchParams.get('code');
+          const state = parsed.searchParams.get('state');
+          const err = parsed.searchParams.get('error');
+          if (err) {
+            setError(err);
+            setIsLoading(false);
+            await Browser.close().catch(() => {});
+            return;
+          }
+          if (!code || !state) return;
+          await handleCallback(code, state);
+          setIsLoading(false);
+          await Browser.close().catch(() => {});
+        } catch (e) {
+          console.error('appUrlOpen handler failed', e);
+          setError(e instanceof Error ? e.message : 'Login failed');
+          setIsLoading(false);
+        }
+      });
+      handle = listener;
+    })();
+    return () => {
+      handle?.remove();
+    };
+  }, [handleCallback]);
+
   const play = useCallback(
     async (contextUri?: string, options?: { positionMs?: number; offsetUri?: string }) => {
       if (!deviceId) {
