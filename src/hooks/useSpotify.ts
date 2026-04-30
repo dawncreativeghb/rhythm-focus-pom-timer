@@ -188,12 +188,19 @@ export function useSpotify() {
         throw new Error(error?.message || 'Failed to start login');
       }
       sessionStorage.setItem(STATE_KEY, data.state);
-      // Break out of preview iframe — Spotify blocks framing with X-Frame-Options: DENY
-      const top = window.top ?? window;
-      try {
-        top.location.href = data.url;
-      } catch {
-        window.open(data.url, '_blank', 'noopener,noreferrer');
+
+      if (Capacitor.isNativePlatform()) {
+        // Native iOS: open in in-app Safari. The appUrlOpen listener will catch
+        // the focusflow:// redirect and finish the exchange.
+        await Browser.open({ url: data.url, presentationStyle: 'popover' });
+      } else {
+        // Web: break out of preview iframe — Spotify blocks framing.
+        const top = window.top ?? window;
+        try {
+          top.location.href = data.url;
+        } catch {
+          window.open(data.url, '_blank', 'noopener,noreferrer');
+        }
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Login failed');
