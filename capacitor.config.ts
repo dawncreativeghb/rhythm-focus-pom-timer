@@ -6,6 +6,7 @@ const config: CapacitorConfig = {
   webDir: 'dist',
   ios: {
     contentInset: 'always',
+    scheme: 'focusflow',
   },
 };
 

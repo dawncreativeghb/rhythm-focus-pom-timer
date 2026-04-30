@@ -1,8 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
+import { App } from '@capacitor/app';
 
 const STORAGE_KEY = 'spotify-auth';
 const STATE_KEY = 'spotify-oauth-state';
+const NATIVE_REDIRECT_URI = 'focusflow://spotify-callback';
 
 interface StoredAuth {
   access_token: string;
@@ -23,6 +27,7 @@ declare global {
 }
 
 function getRedirectUri() {
+  if (Capacitor.isNativePlatform()) return NATIVE_REDIRECT_URI;
   return `${window.location.origin}/spotify-callback`;
 }
 
@@ -183,12 +188,19 @@ export function useSpotify() {
         throw new Error(error?.message || 'Failed to start login');
       }
       sessionStorage.setItem(STATE_KEY, data.state);
-      // Break out of preview iframe — Spotify blocks framing with X-Frame-Options: DENY
-      const top = window.top ?? window;
-      try {
-        top.location.href = data.url;
-      } catch {
-        window.open(data.url, '_blank', 'noopener,noreferrer');
+
+      if (Capacitor.isNativePlatform()) {
+        // Native iOS: open in in-app Safari. The appUrlOpen listener will catch
+        // the focusflow:// redirect and finish the exchange.
+        await Browser.open({ url: data.url, presentationStyle: 'popover' });
+      } else {
+        // Web: break out of preview iframe — Spotify blocks framing.
+        const top = window.top ?? window;
+        try {
+          top.location.href = data.url;
+        } catch {
+          window.open(data.url, '_blank', 'noopener,noreferrer');
+        }
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Login failed');
@@ -227,6 +239,41 @@ export function useSpotify() {
     saveAuth(next);
     setAuth(next);
   }, []);
+
+  // Native: listen for the Spotify redirect coming back via custom URL scheme.
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    let handle: { remove: () => void } | null = null;
+    (async () => {
+      const listener = await App.addListener('appUrlOpen', async ({ url }) => {
+        if (!url || !url.startsWith(NATIVE_REDIRECT_URI)) return;
+        try {
+          const parsed = new URL(url);
+          const code = parsed.searchParams.get('code');
+          const state = parsed.searchParams.get('state');
+          const err = parsed.searchParams.get('error');
+          if (err) {
+            setError(err);
+            setIsLoading(false);
+            await Browser.close().catch(() => {});
+            return;
+          }
+          if (!code || !state) return;
+          await handleCallback(code, state);
+          setIsLoading(false);
+          await Browser.close().catch(() => {});
+        } catch (e) {
+          console.error('appUrlOpen handler failed', e);
+          setError(e instanceof Error ? e.message : 'Login failed');
+          setIsLoading(false);
+        }
+      });
+      handle = listener;
+    })();
+    return () => {
+      handle?.remove();
+    };
+  }, [handleCallback]);
 
   const play = useCallback(
     async (contextUri?: string, options?: { positionMs?: number; offsetUri?: string }) => {
