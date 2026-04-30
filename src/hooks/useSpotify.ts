@@ -1,8 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
+import { App } from '@capacitor/app';
 
 const STORAGE_KEY = 'spotify-auth';
 const STATE_KEY = 'spotify-oauth-state';
+const NATIVE_REDIRECT_URI = 'focusflow://spotify-callback';
 
 interface StoredAuth {
   access_token: string;
