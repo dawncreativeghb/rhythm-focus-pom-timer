@@ -12,6 +12,7 @@ const SCOPES = [
   "user-read-playback-state",
   "user-modify-playback-state",
   "user-read-currently-playing",
+  // Lets us list the user's own playlists for the in-app picker
   "playlist-read-private",
   "playlist-read-collaborative",
 ].join(" ");

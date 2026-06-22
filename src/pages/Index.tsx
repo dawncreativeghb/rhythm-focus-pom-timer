@@ -275,6 +275,7 @@ const Index = () => {
           error: spotify.error,
           connect: spotify.connect,
           disconnect: spotify.disconnect,
+          fetchPlaylists: spotify.fetchPlaylists,
         }}
       />
 

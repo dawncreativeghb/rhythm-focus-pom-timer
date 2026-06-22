@@ -19,6 +19,13 @@ interface SpotifyProfile {
   product: string; // 'premium' | 'free' | 'open'
 }
 
+export interface SpotifyPlaylist {
+  uri: string;
+  name: string;
+  image?: string;
+  trackCount: number;
+}
+
 declare global {
   interface Window {
     Spotify: any;
@@ -357,6 +364,39 @@ export function useSpotify() {
     }
   }, []);
 
+  // Fetch the user's own playlists (paged) for the in-app picker. Requires the
+  // playlist-read-private scope, granted on (re)connect.
+  const fetchPlaylists = useCallback(async (): Promise<SpotifyPlaylist[]> => {
+    const token = await getValidToken();
+    if (!token) return [];
+    const out: SpotifyPlaylist[] = [];
+    let url: string | null = 'https://api.spotify.com/v1/me/playlists?limit=50';
+    try {
+      while (url) {
+        const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+        if (!res.ok) {
+          console.error('[Spotify] fetchPlaylists failed', res.status);
+          break;
+        }
+        const data = await res.json();
+        for (const p of data.items ?? []) {
+          if (p?.uri) {
+            out.push({
+              uri: p.uri,
+              name: p.name ?? 'Untitled playlist',
+              image: p.images?.[0]?.url,
+              trackCount: p.tracks?.total ?? 0,
+            });
+          }
+        }
+        url = data.next;
+      }
+    } catch (e) {
+      console.error('[Spotify] fetchPlaylists error', e);
+    }
+    return out;
+  }, [getValidToken]);
+
   const setVolume = useCallback(async (volume: number) => {
     if (!playerRef.current) return;
     try {
@@ -381,5 +421,6 @@ export function useSpotify() {
     pause,
     setVolume,
     getCurrentState,
+    fetchPlaylists,
   };
 }

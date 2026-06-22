@@ -1,6 +1,6 @@
-import { useRef } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings, Upload, Volume2, Trash2, Music, Bell, X, Loader2, ExternalLink, Youtube } from 'lucide-react';
+import { Settings, Upload, Volume2, Trash2, Music, Bell, X, Loader2, ExternalLink, Youtube, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { isYouTubeSupported } from '@/lib/platform';
 import type { AudioSettings } from '@/hooks/useAudioSettings';
+import type { SpotifyPlaylist } from '@/hooks/useSpotify';
 
 // Convert a Spotify share URL (https://open.spotify.com/playlist/ID?si=...)
 // or a raw ID into a Spotify URI (spotify:playlist:ID). Returns input unchanged
@@ -32,6 +33,7 @@ interface SpotifyState {
   error: string | null;
   connect: () => void;
   disconnect: () => void;
+  fetchPlaylists: () => Promise<SpotifyPlaylist[]>;
 }
 
 interface AudioSettingsModalProps {
@@ -134,6 +136,89 @@ function FileUploadRow({
   );
 }
 
+// Tappable list of the user's own Spotify playlists, with a "paste a link
+// instead" fallback for shared/public playlists not in their library.
+interface PlaylistPickerProps {
+  playlists: SpotifyPlaylist[];
+  loading: boolean;
+  selectedUri: string;
+  onSelect: (uri: string) => void;
+}
+
+function PlaylistPicker({ playlists, loading, selectedUri, onSelect }: PlaylistPickerProps) {
+  const [showPaste, setShowPaste] = useState(false);
+  // A selected URI that isn't one of the fetched playlists was pasted in.
+  const selectedIsCustom =
+    !!selectedUri && !playlists.some((p) => p.uri === selectedUri);
+
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 py-3 text-xs text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" /> Loading your playlists…
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      {playlists.length > 0 && (
+        <div className="max-h-44 overflow-y-auto overscroll-contain rounded-lg border border-border/50">
+          {playlists.map((p) => {
+            const selected = p.uri === selectedUri;
+            return (
+              <button
+                key={p.uri}
+                type="button"
+                onClick={() => onSelect(p.uri)}
+                aria-pressed={selected}
+                className={`flex w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-secondary ${
+                  selected ? 'bg-primary/15' : ''
+                }`}
+              >
+                {p.image ? (
+                  <img src={p.image} alt="" className="h-9 w-9 shrink-0 rounded object-cover" />
+                ) : (
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-secondary">
+                    <Music className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                )}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm text-foreground">{p.name}</span>
+                  <span className="block text-[10px] text-muted-foreground">{p.trackCount} tracks</span>
+                </span>
+                {selected && <Check className="h-4 w-4 shrink-0 text-primary" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {playlists.length === 0 && !showPaste && (
+        <p className="text-xs text-muted-foreground">
+          No playlists found. If you just reconnected, give it a moment — or paste a link below.
+        </p>
+      )}
+
+      <button
+        type="button"
+        onClick={() => setShowPaste((v) => !v)}
+        className="self-start text-[10px] text-muted-foreground underline-offset-2 hover:underline"
+      >
+        {showPaste ? 'Hide link box' : 'Or paste a Spotify link instead'}
+      </button>
+
+      {(showPaste || selectedIsCustom) && (
+        <Input
+          placeholder="Paste Spotify link or URI"
+          value={selectedUri}
+          onChange={(e) => onSelect(normalizeSpotifyUri(e.target.value))}
+          className="text-xs"
+        />
+      )}
+    </div>
+  );
+}
+
 export function AudioSettingsModal({
   isOpen,
   onClose,
@@ -156,6 +241,27 @@ export function AudioSettingsModal({
   spotify,
 }: AudioSettingsModalProps) {
   const youtubeAvailable = isYouTubeSupported();
+
+  // Load the user's Spotify playlists once the modal is open and connected.
+  const [playlists, setPlaylists] = useState<SpotifyPlaylist[]>([]);
+  const [playlistsLoading, setPlaylistsLoading] = useState(false);
+  const loadPlaylists = spotify.fetchPlaylists;
+  useEffect(() => {
+    if (!isOpen || !spotify.isConnected) return;
+    let cancelled = false;
+    setPlaylistsLoading(true);
+    loadPlaylists()
+      .then((list) => {
+        if (!cancelled) setPlaylists(list);
+      })
+      .finally(() => {
+        if (!cancelled) setPlaylistsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, spotify.isConnected, loadPlaylists]);
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -255,11 +361,11 @@ export function AudioSettingsModal({
                       />
                     </div>
                     {settings.useSpotifyForFocus && (
-                      <Input
-                        placeholder="Paste Spotify link or URI"
-                        value={settings.spotifyFocusUri}
-                        onChange={(e) => onSetSpotifyFocusUri(normalizeSpotifyUri(e.target.value))}
-                        className="text-xs"
+                      <PlaylistPicker
+                        playlists={playlists}
+                        loading={playlistsLoading}
+                        selectedUri={settings.spotifyFocusUri}
+                        onSelect={onSetSpotifyFocusUri}
                       />
                     )}
 
@@ -271,17 +377,17 @@ export function AudioSettingsModal({
                       />
                     </div>
                     {settings.useSpotifyForBreak && (
-                      <Input
-                        placeholder="Paste Spotify link or URI"
-                        value={settings.spotifyBreakUri}
-                        onChange={(e) => onSetSpotifyBreakUri(normalizeSpotifyUri(e.target.value))}
-                        className="text-xs"
+                      <PlaylistPicker
+                        playlists={playlists}
+                        loading={playlistsLoading}
+                        selectedUri={settings.spotifyBreakUri}
+                        onSelect={onSetSpotifyBreakUri}
                       />
                     )}
 
                     <p className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                      <ExternalLink className="h-3 w-3" />
-                      Paste any Spotify share link — we'll convert it automatically
+                      <Music className="h-3 w-3" />
+                      Tap a playlist for focus and for break — no copy-paste needed
                     </p>
                   </div>
                 )}
