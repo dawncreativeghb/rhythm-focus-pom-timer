@@ -64,6 +64,14 @@ export function usePomodoro(settings: PomodoroSettings = DEFAULT_SETTINGS) {
     );
   }, [mode, settings]);
 
+  // Reset the entire cycle: back to focus session 1 with all dots cleared
+  const resetCycle = useCallback(() => {
+    setIsRunning(false);
+    setMode('focus');
+    setSessionsCompleted(0);
+    setTimeRemaining(settings.focusDuration * 60);
+  }, [settings]);
+
   const switchMode = useCallback((newMode: TimerMode, nextSessionCount?: number) => {
     setMode(newMode);
     setIsRunning(false);
@@ -135,6 +143,7 @@ export function usePomodoro(settings: PomodoroSettings = DEFAULT_SETTINGS) {
     pause,
     toggle,
     reset,
+    resetCycle,
     switchMode,
     skipToNext,
   };

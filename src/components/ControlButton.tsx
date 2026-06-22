@@ -21,7 +21,7 @@ export function ControlButton({ isRunning, mode, onToggle, onReset, onSkip }: Co
         onClick={onReset}
         className="flex h-12 w-12 items-center justify-center rounded-full bg-secondary text-secondary-foreground transition-colors hover:bg-secondary/80 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
         whileTap={{ scale: 0.95 }}
-        aria-label="Reset timer"
+        aria-label="Reset timer (press again to restart the whole cycle)"
       >
         <RotateCcw className="h-5 w-5" aria-hidden="true" />
       </motion.button>

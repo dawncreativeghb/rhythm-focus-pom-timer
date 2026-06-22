@@ -19,7 +19,7 @@ export function TimerRing({ progress, mode, isRunning, formattedTime, timeRemain
   const remainingFraction = totalTime && totalTime > 0 && typeof timeRemaining === 'number'
     ? Math.max(0, Math.min(1, timeRemaining / totalTime))
     : Math.max(0, Math.min(1, 1 - progress));
-  // Visible arc length = remaining fraction of full circumference; rest is dashed offscreen.
+  // Visible arc = remaining fraction of the circle; the rest is an invisible gap.
   const dashArray = `${circumference * remainingFraction} ${circumference}`;
 
   return (
@@ -58,8 +58,11 @@ export function TimerRing({ progress, mode, isRunning, formattedTime, timeRemain
           className="opacity-30"
         />
 
-        {/* Progress ring — full circle that shrinks counter-clockwise as time elapses */}
-        <motion.circle
+        {/* Progress ring — full circle that shrinks counter-clockwise as time elapses.
+            Anchored at 12 o'clock (rotate -90). The visible arc grows clockwise from
+            there, so the invisible gap (elapsed time) opens counter-clockwise from 12.
+            A plain <circle> with a CSS transition keeps the per-second steps smooth. */}
+        <circle
           cx={size / 2}
           cy={size / 2}
           r={radius}
@@ -67,11 +70,9 @@ export function TimerRing({ progress, mode, isRunning, formattedTime, timeRemain
           stroke={mode === 'focus' ? 'hsl(var(--primary))' : 'hsl(var(--break))'}
           strokeWidth={strokeWidth}
           strokeLinecap="round"
-          // Start at 12 o'clock and sweep counter-clockwise
-          transform={`rotate(-90 ${size / 2} ${size / 2}) scale(1, -1) translate(0, ${-size})`}
-          initial={false}
-          animate={{ strokeDasharray: dashArray }}
-          transition={{ duration: 1, ease: 'linear' }}
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+          strokeDasharray={dashArray}
+          style={{ transition: 'stroke-dasharray 1s linear' }}
         />
       </svg>
 

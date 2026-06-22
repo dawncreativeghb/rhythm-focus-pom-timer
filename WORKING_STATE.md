@@ -23,10 +23,6 @@ Format: `YYYY-MM-DD` — Feature ✅ (where the fix lives) — notes
   - Fix: `parseYouTubeId` is preferred over `parseYouTubePlaylistId` in
     `src/components/YouTubePlayer.tsx` source-swap effect.
 
-- **2026-04-29** — Smooth counterclockwise timer ring animation ✅
-  - Fix: `src/components/TimerRing.tsx` + sub-second progress in
-    `src/hooks/usePomodoro.ts`.
-
 - **2026-04-29** — Built-in break chime (no upload) ✅
   - Fix: Web Audio synthesized two-tone bell in
     `src/hooks/useAudioPlayer.ts`; on/off switch in
@@ -41,6 +37,28 @@ Format: `YYYY-MM-DD` — Feature ✅ (where the fix lives) — notes
     `src/hooks/usePomodoro.ts`, `src/components/TimerRing.tsx`, and
     `src/hooks/useAudioPlayer.ts` as a known-good baseline.
   - Next milestone: verify on iOS (Capacitor) before adding features.
+
+---
+
+## Regressed
+
+- **2026-06-11** — Smooth counterclockwise timer ring animation (originally
+  confirmed 2026-04-29) ❌→🔧
+  - User reported the ring draining clockwise (gap opening to the right of
+    12 o'clock) instead of counterclockwise.
+  - Suspected cause: a `scale(1, -1) translate(...)` mirror in the
+    `TimerRing` transform flipped the drain direction.
+  - Fixed same day: removed the `scale(1, -1) translate(...)` mirror from the
+    `TimerRing` transform (it was flipping the drain direction); transform is
+    now just `rotate(-90 ...)`. Also replaced the `motion.circle` with a plain
+    `<circle>` using a CSS `stroke-dasharray 1s linear` transition — an
+    interim `pathLength` attempt threw a render error and crashed TimerRing
+    (no error boundary around it), which reset the timer. Plain circle + CSS
+    is crash-proof.
+  - Verified by automated test: dash length steadily decreased while the
+    timer counted 25:00→24:55 with no remount/crash; freeze-frame screenshot
+    confirmed the gap opens counter-clockwise (upper-left). Awaiting Amanda's
+    visual re-confirmation before moving back to Confirmed.
 
 ---
 

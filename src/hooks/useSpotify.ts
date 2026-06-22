@@ -123,7 +123,7 @@ export function useSpotify() {
 
     const initPlayer = () => {
       const player = new window.Spotify.Player({
-        name: 'Focus Flow Pomodoro',
+        name: 'Rhythm Focus Pomodoro',
         getOAuthToken: async (cb: (token: string) => void) => {
           const token = await getValidToken();
           if (token) cb(token);

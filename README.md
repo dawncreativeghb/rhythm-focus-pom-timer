@@ -1,73 +1,49 @@
-# Welcome to your Lovable project
+# Rhythm Focus
 
-## Project info
+A Pomodoro timer that uses music as your focus cue — built for sensitive, overstimulated brains (ADHD, autistic, HSP, anxious) who don't want to touch their phone to work.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+**Live app:** https://rhythm-focus-pom-timer.lovable.app
 
-## How can I edit this code?
+## What it does
 
-There are several ways of editing your application.
+- **25/5/30 Pomodoro cycle** — four 25-minute focus sessions; 5-minute breaks after the first three, a 30-minute long break after the fourth. Session dots show where you are in the cycle.
+- **Counterclockwise drain timer** — the ring empties as time runs out, like a visual hourglass.
+- **Music as a cue** — your focus playlist starts when you start and pauses on break. Separate playlists for focus and break, each resuming where it left off.
+- **Sources:** Spotify (Premium), YouTube, or local audio files. Works with no music too.
+- **Sensory-gentle:** optional soft break chime (can be turned off), no streaks, no gamification, no notification spam.
+- **Two-step reset:** one press rewinds the current focus/break; a second press restarts the whole cycle.
 
-**Use Lovable**
+## Surfaces
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+| Surface | Where |
+|---|---|
+| Web app | this repo (`npm run dev`) |
+| Chrome extension | `extension/` — popup timer, also downloadable in-app at `/install-extension` |
+| iOS app | Capacitor (`capacitor.config.ts`, app id `com.dawncreative.rhythmfocus`) |
 
-Changes made via Lovable will be committed automatically to this repo.
+## Development
 
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+Requires Node.js and npm.
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+npm install     # install dependencies
+npm run dev     # dev server at http://localhost:8080
+npm run lint    # lint
+npx vitest run  # tests
+npm run build   # production build to dist/
 ```
 
-**Edit a file directly in GitHub**
+## Project conventions
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+- **Read `WORKING_STATE.md` before changing timer or playback code.** It logs user-confirmed-working features and the fixes behind them; don't regress them.
+- Local-first: full app works offline; Supabase is for sync/auth only. No third-party analytics.
+- All animations should respect the system Reduce Motion setting.
 
-**Use GitHub Codespaces**
+## Architecture overview
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+- `src/hooks/usePomodoro.ts` — timer state machine (modes, sessions, reset/skip)
+- `src/components/TimerRing.tsx` — counterclockwise SVG ring animation
+- `src/hooks/useSpotify.ts` / `src/components/YouTubePlayer.tsx` — music integrations (see WORKING_STATE.md before touching)
+- `src/hooks/useAudioPlayer.ts` — local audio + synthesized break chime
+- `src/pages/Index.tsx` — main screen wiring it all together
+- `supabase/` — backend config (auth + cross-device sync, in progress)

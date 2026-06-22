@@ -162,6 +162,18 @@ const Index = () => {
 
   const handleMusicToggle = () => setMusicEnabled((prev) => !prev);
 
+  // Two-step reset: first click rewinds the current focus/break; clicking
+  // again while already rewound restarts the whole 4-session cycle.
+  const handleReset = () => {
+    const atIntervalStart =
+      !pomodoro.isRunning && pomodoro.timeRemaining === pomodoro.totalTime;
+    if (atIntervalStart) {
+      pomodoro.resetCycle();
+    } else {
+      pomodoro.reset();
+    }
+  };
+
   const hasAudioConfigured = !!(
     audioSettings.settings.focusMusic ||
     audioSettings.settings.breakMusic ||
@@ -210,7 +222,7 @@ const Index = () => {
           isRunning={pomodoro.isRunning}
           mode={pomodoro.mode}
           onToggle={pomodoro.toggle}
-          onReset={pomodoro.reset}
+          onReset={handleReset}
           onSkip={pomodoro.skipToNext}
         />
       </motion.section>
