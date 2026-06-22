@@ -239,6 +239,9 @@ const Index = () => {
           hasAudioConfigured={hasAudioConfigured}
           onToggle={handleMusicToggle}
           onOpenSettings={() => setSettingsOpen(true)}
+          showTrackControls={useSpotifyNow && spotify.isConnected && spotify.playerReady}
+          onPrevTrack={spotify.previousTrack}
+          onNextTrack={spotify.nextTrack}
         />
         <p className="text-xs text-muted-foreground">
           {hasAudioConfigured

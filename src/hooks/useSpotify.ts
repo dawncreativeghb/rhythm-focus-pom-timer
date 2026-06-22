@@ -406,6 +406,26 @@ export function useSpotify() {
     }
   }, []);
 
+  // Skip controls — use the Web Playback SDK player directly so they work
+  // without an extra API round-trip.
+  const nextTrack = useCallback(async () => {
+    if (!playerRef.current) return;
+    try {
+      await playerRef.current.nextTrack();
+    } catch (e) {
+      console.error('[Spotify] nextTrack error', e);
+    }
+  }, []);
+
+  const previousTrack = useCallback(async () => {
+    if (!playerRef.current) return;
+    try {
+      await playerRef.current.previousTrack();
+    } catch (e) {
+      console.error('[Spotify] previousTrack error', e);
+    }
+  }, []);
+
   return {
     isConnected,
     isPremium,
@@ -422,5 +442,7 @@ export function useSpotify() {
     setVolume,
     getCurrentState,
     fetchPlaylists,
+    nextTrack,
+    previousTrack,
   };
 }
