@@ -23,7 +23,6 @@ export interface SpotifyPlaylist {
   uri: string;
   name: string;
   image?: string;
-  trackCount: number;
 }
 
 declare global {
@@ -385,7 +384,6 @@ export function useSpotify() {
               uri: p.uri,
               name: p.name ?? 'Untitled playlist',
               image: p.images?.[0]?.url,
-              trackCount: p.tracks?.total ?? 0,
             });
           }
         }

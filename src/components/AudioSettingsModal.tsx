@@ -182,10 +182,7 @@ function PlaylistPicker({ playlists, loading, selectedUri, onSelect }: PlaylistP
                     <Music className="h-4 w-4 text-muted-foreground" />
                   </div>
                 )}
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm text-foreground">{p.name}</span>
-                  <span className="block text-[10px] text-muted-foreground">{p.trackCount} tracks</span>
-                </span>
+                <span className="min-w-0 flex-1 truncate text-sm text-foreground">{p.name}</span>
                 {selected && <Check className="h-4 w-4 shrink-0 text-primary" />}
               </button>
             );
