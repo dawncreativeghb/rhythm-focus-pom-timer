@@ -271,12 +271,19 @@ export function AudioSettingsModal({
             onClick={onClose}
           />
 
+          {/* Scroll container: centers the modal when it fits and scrolls the
+              whole thing (down to the Done button) when the viewport is short. */}
+          <div
+            className="fixed inset-0 z-50 flex justify-center overflow-y-auto overscroll-contain p-4"
+            onClick={onClose}
+          >
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed inset-x-4 top-1/2 z-50 mx-auto max-h-[85dvh] max-w-md -translate-y-1/2 overflow-y-auto overscroll-contain rounded-2xl bg-card p-5 shadow-xl sm:p-6"
+            onClick={(e) => e.stopPropagation()}
+            className="my-auto w-full max-w-md rounded-2xl bg-card p-5 shadow-xl sm:p-6"
           >
             <div className="mb-6 flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -483,6 +490,7 @@ export function AudioSettingsModal({
               <Button onClick={onClose}>Done</Button>
             </div>
           </motion.div>
+          </div>
         </>
       )}
     </AnimatePresence>

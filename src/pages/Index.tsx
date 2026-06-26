@@ -187,12 +187,24 @@ const Index = () => {
 
   return (
     <main
-      className={`flex min-h-[100dvh] w-full max-w-full flex-col items-center justify-between overflow-x-hidden px-4 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(2rem,env(safe-area-inset-top))] transition-colors duration-500 sm:px-6 ${
+      className={`relative flex min-h-[100dvh] w-full max-w-full flex-col items-center justify-between overflow-x-hidden px-4 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(2rem,env(safe-area-inset-top))] transition-colors duration-500 sm:px-6 ${
         pomodoro.mode === 'focus' ? 'gradient-focus' : 'gradient-break'
       }`}
       role="main"
       aria-label="Pomodoro Timer"
     >
+      {/* Always-visible (no scrolling) entry point for the floating timer. */}
+      {pip.isSupported && (
+        <button
+          onClick={pip.isOpen ? pip.close : pip.open}
+          className="absolute right-4 top-[max(1rem,env(safe-area-inset-top))] z-10 flex items-center gap-1.5 rounded-full bg-secondary/70 px-3 py-1.5 text-xs text-secondary-foreground backdrop-blur-sm transition-colors hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-ring"
+          aria-label={pip.isOpen ? 'Close floating timer' : 'Pop out floating timer'}
+        >
+          <PictureInPicture2 className="h-4 w-4" aria-hidden="true" />
+          {pip.isOpen ? 'Close' : 'Pop out'}
+        </button>
+      )}
+
       <motion.header
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -253,17 +265,6 @@ const Index = () => {
             ? 'Tap to control music • Settings for audio'
             : 'Tap settings to add music or connect Spotify'}
         </p>
-
-        {pip.isSupported && (
-          <button
-            onClick={pip.isOpen ? pip.close : pip.open}
-            className="flex items-center gap-2 rounded-full px-4 py-2 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            aria-label={pip.isOpen ? 'Close floating timer' : 'Pop out floating timer'}
-          >
-            <PictureInPicture2 className="h-4 w-4" aria-hidden="true" />
-            {pip.isOpen ? 'Close floating timer' : 'Pop out timer'}
-          </button>
-        )}
       </motion.footer>
 
       {pip.pipWindow &&
