@@ -50,6 +50,10 @@ Deno.serve(async (req) => {
       url.searchParams.set("scope", SCOPES);
       url.searchParams.set("redirect_uri", redirect_uri);
       url.searchParams.set("state", state);
+      // Force Spotify to show the consent screen again when scopes change.
+      // Without this, Spotify can reuse an older grant and return server_error
+      // instead of prompting for the newly requested playlist permissions.
+      url.searchParams.set("show_dialog", "true");
       return new Response(
         JSON.stringify({ url: url.toString(), state }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
