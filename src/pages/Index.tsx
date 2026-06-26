@@ -1,6 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
+import { PictureInPicture2 } from 'lucide-react';
 import { usePomodoro } from '@/hooks/usePomodoro';
+import { useDocumentPiP } from '@/hooks/useDocumentPiP';
+import { PipTimer } from '@/components/PipTimer';
 import { useAudioSettings } from '@/hooks/useAudioSettings';
 import { useAudioPlayer } from '@/hooks/useAudioPlayer';
 import { useSpotify } from '@/hooks/useSpotify';
@@ -28,6 +32,7 @@ const Index = () => {
   const [musicEnabled, setMusicEnabled] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const youtubeAvailable = isYouTubeSupported();
+  const pip = useDocumentPiP();
 
   // ----- Debug mode (URL ?debug=1) — drives YouTube only, leaves real timer alone -----
   const debugEnabled = isDebugEnabled();
@@ -248,7 +253,33 @@ const Index = () => {
             ? 'Tap to control music • Settings for audio'
             : 'Tap settings to add music or connect Spotify'}
         </p>
+
+        {pip.isSupported && (
+          <button
+            onClick={pip.isOpen ? pip.close : pip.open}
+            className="flex items-center gap-2 rounded-full px-4 py-2 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            aria-label={pip.isOpen ? 'Close floating timer' : 'Pop out floating timer'}
+          >
+            <PictureInPicture2 className="h-4 w-4" aria-hidden="true" />
+            {pip.isOpen ? 'Close floating timer' : 'Pop out timer'}
+          </button>
+        )}
       </motion.footer>
+
+      {pip.pipWindow &&
+        createPortal(
+          <PipTimer
+            mode={pomodoro.mode}
+            progress={pomodoro.progress}
+            isRunning={pomodoro.isRunning}
+            formattedTime={pomodoro.formattedTime}
+            timeRemaining={pomodoro.timeRemaining}
+            totalTime={pomodoro.totalTime}
+            sessionsCompleted={pomodoro.sessionsCompleted}
+            onToggle={pomodoro.toggle}
+          />,
+          pip.pipWindow.document.body
+        )}
 
       <AudioSettingsModal
         isOpen={settingsOpen}
