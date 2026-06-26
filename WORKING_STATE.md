@@ -38,27 +38,36 @@ Format: `YYYY-MM-DD` — Feature ✅ (where the fix lives) — notes
     `src/hooks/useAudioPlayer.ts` as a known-good baseline.
   - Next milestone: verify on iOS (Capacitor) before adding features.
 
----
+- **2026-06-22** — Counterclockwise timer ring drain ✅
+  - (Briefly regressed 2026-06-11: a `scale(1,-1) translate(...)` mirror in
+    `TimerRing` flipped the drain clockwise.) Fixed: transform is just
+    `rotate(-90 ...)`, rendered as a plain `<circle>` with a CSS
+    `stroke-dasharray 1s linear` transition. Do NOT reintroduce a scale/mirror
+    transform, and don't use framer-motion `pathLength` here (it threw and
+    crashed the un-bounded TimerRing). Amanda visually confirmed.
 
-## Regressed
+- **2026-06-22** — Two-step reset + 30-min long break ✅
+  - Long break is 30 min (`usePomodoro` `DEFAULT_SETTINGS` + the inline
+    settings in `src/pages/Index.tsx`). Reset button is two-step
+    (`handleReset` in `Index.tsx`): 1st press rewinds the current focus/break
+    (`pomodoro.reset`), 2nd press while already at the interval start restarts
+    the whole 4-session cycle (`pomodoro.resetCycle`).
 
-- **2026-06-11** — Smooth counterclockwise timer ring animation (originally
-  confirmed 2026-04-29) ❌→🔧
-  - User reported the ring draining clockwise (gap opening to the right of
-    12 o'clock) instead of counterclockwise.
-  - Suspected cause: a `scale(1, -1) translate(...)` mirror in the
-    `TimerRing` transform flipped the drain direction.
-  - Fixed same day: removed the `scale(1, -1) translate(...)` mirror from the
-    `TimerRing` transform (it was flipping the drain direction); transform is
-    now just `rotate(-90 ...)`. Also replaced the `motion.circle` with a plain
-    `<circle>` using a CSS `stroke-dasharray 1s linear` transition — an
-    interim `pathLength` attempt threw a render error and crashed TimerRing
-    (no error boundary around it), which reset the timer. Plain circle + CSS
-    is crash-proof.
-  - Verified by automated test: dash length steadily decreased while the
-    timer counted 25:00→24:55 with no remount/crash; freeze-frame screenshot
-    confirmed the gap opens counter-clockwise (upper-left). Awaiting Amanda's
-    visual re-confirmation before moving back to Confirmed.
+- **2026-06-22** — In-app Spotify playlist picker ✅
+  - `fetchPlaylists` in `src/hooks/useSpotify.ts` (needs the
+    `playlist-read-private` scope, deployed via Lovable) + `PlaylistPicker` in
+    `src/components/AudioSettingsModal.tsx`. Tappable list with cover art;
+    "paste a link" remains a fallback (and is required for artists/albums,
+    which `/me/playlists` doesn't return). No track-count label (Spotify's
+    `tracks.total` came back empty in practice). Connecting needs
+    `show_dialog=true` on the authorize URL (in the `spotify-auth` edge
+    function) — without it, re-consent after a scope change throws
+    `server_error`. Amanda confirmed: connect, pick playlist, playback all work.
+
+- **2026-06-22** — Spotify previous/next track skip buttons ✅
+  - `nextTrack`/`previousTrack` (Web Playback SDK) in `useSpotify`, surfaced as
+    skip buttons in `src/components/MusicToggle.tsx` (only when Spotify is the
+    active, ready source). Amanda confirmed skipping works.
 
 ---
 
