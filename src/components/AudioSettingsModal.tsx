@@ -271,19 +271,23 @@ export function AudioSettingsModal({
             onClick={onClose}
           />
 
-          {/* Scroll container: centers the modal when it fits and scrolls the
-              whole thing (down to the Done button) when the viewport is short. */}
+          {/* Scroll container. Outer div is the ONLY scroller; the inner flex
+              uses min-h-full so it centers the modal when short and grows past
+              the viewport when tall — so the whole modal (incl. Done) is always
+              reachable. This nesting is the cross-browser-safe pattern: Safari
+              mishandles auto-margin centering inside an overflow flex container. */}
           <div
-            className="fixed inset-0 z-50 flex justify-center overflow-y-auto overscroll-contain p-4"
+            className="fixed inset-0 z-50 overflow-y-auto overscroll-contain"
             onClick={onClose}
           >
+          <div className="flex min-h-full items-center justify-center p-4">
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
             onClick={(e) => e.stopPropagation()}
-            className="my-auto w-full max-w-md rounded-2xl bg-card p-5 shadow-xl sm:p-6"
+            className="w-full max-w-md rounded-2xl bg-card p-5 shadow-xl sm:p-6"
           >
             <div className="mb-6 flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -490,6 +494,7 @@ export function AudioSettingsModal({
               <Button onClick={onClose}>Done</Button>
             </div>
           </motion.div>
+          </div>
           </div>
         </>
       )}
