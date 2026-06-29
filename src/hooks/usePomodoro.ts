@@ -9,12 +9,17 @@ interface PomodoroSettings {
   sessionsBeforeLongBreak: number; // number of focus sessions before long break
 }
 
-interface PomodoroState {
+// The full timer state, expressed against an absolute anchor so it can be
+// shared between devices for lockstep sync. `remainingAtAnchor` is how many
+// seconds were left at `anchorAt` (epoch ms); while running, the live value is
+// remainingAtAnchor - (now - anchorAt). When paused, the live value is just
+// remainingAtAnchor.
+export interface TimerSyncState {
   mode: TimerMode;
-  timeRemaining: number; // in seconds
-  isRunning: boolean;
-  progress: number; // 0 to 1
   sessionsCompleted: number;
+  isRunning: boolean;
+  remainingAtAnchor: number;
+  anchorAt: number;
 }
 
 const DEFAULT_SETTINGS: PomodoroSettings = {
@@ -24,107 +29,169 @@ const DEFAULT_SETTINGS: PomodoroSettings = {
   sessionsBeforeLongBreak: 4,
 };
 
-export function usePomodoro(settings: PomodoroSettings = DEFAULT_SETTINGS) {
-  const [mode, setMode] = useState<TimerMode>('focus');
-  const [timeRemaining, setTimeRemaining] = useState(settings.focusDuration * 60);
-  const [isRunning, setIsRunning] = useState(false);
-  const [sessionsCompleted, setSessionsCompleted] = useState(0);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+// Seconds for a given mode at a given session count (long break every Nth).
+function durationFor(
+  mode: TimerMode,
+  sessionsCompleted: number,
+  settings: PomodoroSettings
+): number {
+  if (mode === 'focus') return settings.focusDuration * 60;
+  const isLong =
+    sessionsCompleted > 0 && sessionsCompleted % settings.sessionsBeforeLongBreak === 0;
+  return (isLong ? settings.longBreakDuration : settings.shortBreakDuration) * 60;
+}
 
-  // Determine if this break should be a long break
-  const isLongBreak = sessionsCompleted > 0 && sessionsCompleted % settings.sessionsBeforeLongBreak === 0;
-  
-  const getBreakDuration = () => {
-    return isLongBreak ? settings.longBreakDuration : settings.shortBreakDuration;
+// Live seconds remaining for a state at a given moment.
+function liveRemaining(s: TimerSyncState, nowMs: number): number {
+  if (!s.isRunning) return s.remainingAtAnchor;
+  return Math.max(0, s.remainingAtAnchor - (nowMs - s.anchorAt) / 1000);
+}
+
+// Roll a finished phase over to the next one, fresh anchor, still running —
+// preserves the original "auto-advance into the next phase" behavior.
+function advance(s: TimerSyncState, settings: PomodoroSettings): TimerSyncState {
+  if (s.mode === 'focus') {
+    const sessionsCompleted = s.sessionsCompleted + 1;
+    return {
+      mode: 'break',
+      sessionsCompleted,
+      isRunning: true,
+      remainingAtAnchor: durationFor('break', sessionsCompleted, settings),
+      anchorAt: Date.now(),
+    };
+  }
+  return {
+    mode: 'focus',
+    sessionsCompleted: s.sessionsCompleted,
+    isRunning: true,
+    remainingAtAnchor: settings.focusDuration * 60,
+    anchorAt: Date.now(),
   };
+}
 
-  const totalTime = mode === 'focus' 
-    ? settings.focusDuration * 60 
-    : getBreakDuration() * 60;
+export function usePomodoro(settings: PomodoroSettings = DEFAULT_SETTINGS) {
+  const [state, setState] = useState<TimerSyncState>(() => ({
+    mode: 'focus',
+    sessionsCompleted: 0,
+    isRunning: false,
+    remainingAtAnchor: settings.focusDuration * 60,
+    anchorAt: Date.now(),
+  }));
+  const [now, setNow] = useState(() => Date.now());
 
-  const progress = 1 - (timeRemaining / totalTime);
+  // Tick only while running. 250ms keeps the display prompt without busywork.
+  useEffect(() => {
+    if (!state.isRunning) return;
+    const id = setInterval(() => setNow(Date.now()), 250);
+    return () => clearInterval(id);
+  }, [state.isRunning]);
+
+  // Auto-advance when a running phase reaches zero.
+  useEffect(() => {
+    if (!state.isRunning) return;
+    if (liveRemaining(state, now) <= 0) {
+      setState((s) => (liveRemaining(s, Date.now()) <= 0 ? advance(s, settings) : s));
+    }
+  }, [now, state, settings]);
+
+  const totalTime = durationFor(state.mode, state.sessionsCompleted, settings);
+  const remaining = liveRemaining(state, now);
+  const timeRemaining = Math.max(0, Math.ceil(remaining));
+  const progress = totalTime > 0 ? 1 - remaining / totalTime : 0;
 
   const start = useCallback(() => {
-    setIsRunning(true);
+    setState((s) =>
+      s.isRunning ? s : { ...s, isRunning: true, anchorAt: Date.now() }
+    );
   }, []);
 
   const pause = useCallback(() => {
-    setIsRunning(false);
+    setState((s) =>
+      !s.isRunning
+        ? s
+        : {
+            ...s,
+            isRunning: false,
+            remainingAtAnchor: liveRemaining(s, Date.now()),
+            anchorAt: Date.now(),
+          }
+    );
   }, []);
 
   const toggle = useCallback(() => {
-    setIsRunning(prev => !prev);
+    setState((s) =>
+      s.isRunning
+        ? { ...s, isRunning: false, remainingAtAnchor: liveRemaining(s, Date.now()), anchorAt: Date.now() }
+        : { ...s, isRunning: true, anchorAt: Date.now() }
+    );
   }, []);
 
+  // Rewind the current focus/break to its start.
   const reset = useCallback(() => {
-    setIsRunning(false);
-    setTimeRemaining(mode === 'focus' 
-      ? settings.focusDuration * 60 
-      : getBreakDuration() * 60
-    );
-  }, [mode, settings]);
-
-  // Reset the entire cycle: back to focus session 1 with all dots cleared
-  const resetCycle = useCallback(() => {
-    setIsRunning(false);
-    setMode('focus');
-    setSessionsCompleted(0);
-    setTimeRemaining(settings.focusDuration * 60);
+    setState((s) => ({
+      ...s,
+      isRunning: false,
+      remainingAtAnchor: durationFor(s.mode, s.sessionsCompleted, settings),
+      anchorAt: Date.now(),
+    }));
   }, [settings]);
 
-  const switchMode = useCallback((newMode: TimerMode, nextSessionCount?: number) => {
-    setMode(newMode);
-    setIsRunning(false);
-    const sessCount = nextSessionCount ?? sessionsCompleted;
-    const willBeLongBreak = newMode === 'break' && sessCount > 0 && sessCount % settings.sessionsBeforeLongBreak === 0;
-    setTimeRemaining(newMode === 'focus' 
-      ? settings.focusDuration * 60 
-      : (willBeLongBreak ? settings.longBreakDuration : settings.shortBreakDuration) * 60
-    );
-  }, [settings, sessionsCompleted]);
+  // Restart the whole cycle from focus session 1.
+  const resetCycle = useCallback(() => {
+    setState({
+      mode: 'focus',
+      sessionsCompleted: 0,
+      isRunning: false,
+      remainingAtAnchor: settings.focusDuration * 60,
+      anchorAt: Date.now(),
+    });
+  }, [settings]);
+
+  const switchMode = useCallback(
+    (newMode: TimerMode, nextSessionCount?: number) => {
+      setState((s) => {
+        const sessCount = nextSessionCount ?? s.sessionsCompleted;
+        return {
+          ...s,
+          mode: newMode,
+          isRunning: false,
+          remainingAtAnchor: durationFor(newMode, sessCount, settings),
+          anchorAt: Date.now(),
+        };
+      });
+    },
+    [settings]
+  );
 
   const skipToNext = useCallback(() => {
-    if (mode === 'focus') {
-      const newCount = sessionsCompleted + 1;
-      setSessionsCompleted(newCount);
-      switchMode('break', newCount);
-    } else {
-      switchMode('focus');
-    }
-  }, [mode, switchMode, sessionsCompleted]);
-
-  // Timer effect
-  useEffect(() => {
-    if (isRunning && timeRemaining > 0) {
-      intervalRef.current = setInterval(() => {
-        setTimeRemaining(prev => {
-          if (prev <= 1) {
-            // Timer complete
-            if (mode === 'focus') {
-              const newSessionCount = sessionsCompleted + 1;
-              setSessionsCompleted(newSessionCount);
-              setMode('break');
-              // Check if this should be a long break (every 4th session)
-              const shouldBeLongBreak = newSessionCount % settings.sessionsBeforeLongBreak === 0;
-              return shouldBeLongBreak ? settings.longBreakDuration * 60 : settings.shortBreakDuration * 60;
-            } else {
-              setMode('focus');
-              return settings.focusDuration * 60;
-            }
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
+    setState((s) => {
+      if (s.mode === 'focus') {
+        const newCount = s.sessionsCompleted + 1;
+        return {
+          mode: 'break',
+          sessionsCompleted: newCount,
+          isRunning: false,
+          remainingAtAnchor: durationFor('break', newCount, settings),
+          anchorAt: Date.now(),
+        };
       }
-    };
-  }, [isRunning, timeRemaining, mode, settings]);
+      return {
+        mode: 'focus',
+        sessionsCompleted: s.sessionsCompleted,
+        isRunning: false,
+        remainingAtAnchor: settings.focusDuration * 60,
+        anchorAt: Date.now(),
+      };
+    });
+  }, [settings]);
 
-  // Format time as MM:SS
+  // Apply a state pushed from another device (lockstep sync). The incoming
+  // anchor means we compute the same live countdown locally.
+  const hydrate = useCallback((incoming: TimerSyncState) => {
+    setState(incoming);
+    setNow(Date.now());
+  }, []);
+
   const formatTime = useCallback((seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -132,13 +199,14 @@ export function usePomodoro(settings: PomodoroSettings = DEFAULT_SETTINGS) {
   }, []);
 
   return {
-    mode,
+    mode: state.mode,
     timeRemaining,
     totalTime,
-    isRunning,
+    isRunning: state.isRunning,
     progress,
-    sessionsCompleted,
+    sessionsCompleted: state.sessionsCompleted,
     formattedTime: formatTime(timeRemaining),
+    syncState: state,
     start,
     pause,
     toggle,
@@ -146,5 +214,6 @@ export function usePomodoro(settings: PomodoroSettings = DEFAULT_SETTINGS) {
     resetCycle,
     switchMode,
     skipToNext,
+    hydrate,
   };
 }
