@@ -18,6 +18,9 @@ import { YouTubePlayer } from '@/components/YouTubePlayer';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { DebugPanel, isDebugEnabled, type DebugState } from '@/components/DebugPanel';
 import { isYouTubeSupported } from '@/lib/platform';
+import { useAuth } from '@/hooks/useAuth';
+import { useCloudSync } from '@/hooks/useCloudSync';
+import { AccountControl } from '@/components/AccountControl';
 
 const Index = () => {
   const pomodoro = usePomodoro({
@@ -33,6 +36,16 @@ const Index = () => {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const youtubeAvailable = isYouTubeSupported();
   const pip = useDocumentPiP();
+  const auth = useAuth();
+
+  // Cross-device sync (no-op when signed out — app stays local-first).
+  useCloudSync({
+    user: auth.user,
+    timerState: pomodoro.syncState,
+    applyTimer: pomodoro.hydrate,
+    audio: audioSettings.settings,
+    applyAudio: audioSettings.hydrate,
+  });
 
   // ----- Debug mode (URL ?debug=1) — drives YouTube only, leaves real timer alone -----
   const debugEnabled = isDebugEnabled();
@@ -193,6 +206,8 @@ const Index = () => {
       role="main"
       aria-label="Pomodoro Timer"
     >
+      <AccountControl auth={auth} />
+
       {/* Always-visible (no scrolling) entry point for the floating timer. */}
       {pip.isSupported && (
         <button

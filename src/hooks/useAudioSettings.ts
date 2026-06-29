@@ -139,6 +139,12 @@ export function useAudioSettings() {
     setSettings({ ...DEFAULT_SETTINGS });
   }, []);
 
+  // Merge in settings synced from another device. Only the syncable (non-file)
+  // fields are passed, so locally-uploaded audio files are left untouched.
+  const hydrate = useCallback((incoming: Partial<AudioSettings>) => {
+    setSettings((prev) => ({ ...prev, ...incoming }));
+  }, []);
+
   const setSpotifyFocusUri = useCallback((uri: string) => {
     setSettings(prev => ({ ...prev, spotifyFocusUri: uri }));
   }, []);
@@ -182,6 +188,7 @@ export function useAudioSettings() {
     toggleBreakMusic,
     setVolume,
     clearAll,
+    hydrate,
     setSpotifyFocusUri,
     setSpotifyBreakUri,
     toggleUseSpotifyForFocus,
