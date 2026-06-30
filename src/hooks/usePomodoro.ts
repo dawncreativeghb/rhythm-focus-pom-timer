@@ -41,10 +41,13 @@ function durationFor(
   return (isLong ? settings.longBreakDuration : settings.shortBreakDuration) * 60;
 }
 
-// Live seconds remaining for a state at a given moment.
+// Live seconds remaining for a state at a given moment. Clamped to
+// [0, remainingAtAnchor]: the upper clamp avoids a brief over-count when the
+// ticking clock lags a fresh anchor (e.g. right after start/skip).
 function liveRemaining(s: TimerSyncState, nowMs: number): number {
   if (!s.isRunning) return s.remainingAtAnchor;
-  return Math.max(0, s.remainingAtAnchor - (nowMs - s.anchorAt) / 1000);
+  const elapsed = (nowMs - s.anchorAt) / 1000;
+  return Math.max(0, Math.min(s.remainingAtAnchor, s.remainingAtAnchor - elapsed));
 }
 
 // Roll a finished phase over to the next one, fresh anchor, still running —
@@ -163,6 +166,8 @@ export function usePomodoro(settings: PomodoroSettings = DEFAULT_SETTINGS) {
     [settings]
   );
 
+  // Skipping is a deliberate "move me forward now" action, so the next
+  // session starts running immediately (hit pause if you want it held).
   const skipToNext = useCallback(() => {
     setState((s) => {
       if (s.mode === 'focus') {
@@ -170,7 +175,7 @@ export function usePomodoro(settings: PomodoroSettings = DEFAULT_SETTINGS) {
         return {
           mode: 'break',
           sessionsCompleted: newCount,
-          isRunning: false,
+          isRunning: true,
           remainingAtAnchor: durationFor('break', newCount, settings),
           anchorAt: Date.now(),
         };
@@ -178,7 +183,7 @@ export function usePomodoro(settings: PomodoroSettings = DEFAULT_SETTINGS) {
       return {
         mode: 'focus',
         sessionsCompleted: s.sessionsCompleted,
-        isRunning: false,
+        isRunning: true,
         remainingAtAnchor: settings.focusDuration * 60,
         anchorAt: Date.now(),
       };
