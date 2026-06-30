@@ -292,7 +292,6 @@ const Index = () => {
             timeRemaining={pomodoro.timeRemaining}
             totalTime={pomodoro.totalTime}
             sessionsCompleted={pomodoro.sessionsCompleted}
-            onToggle={pomodoro.toggle}
           />,
           pip.pipWindow.document.body
         )}
