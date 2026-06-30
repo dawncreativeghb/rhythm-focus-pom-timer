@@ -78,5 +78,22 @@ Format: `YYYY-MM-DD` — Feature ✅ (where the fix lives) — notes
    *before* making the change and offer a safer alternative.
 3. After the user confirms a new feature works, append an entry here in the
    same session.
-4. If a confirmed feature regresses, move its entry to a `## Regressed`
+4. If a confirmed feature regresses, move its entry to a `- **2026-06-29** — Timer engine reworked to timestamp-anchored state ✅
+  - `usePomodoro` now holds `(remainingAtAnchor, anchorAt)` instead of a
+    decrementing counter, so devices share one source of truth (lockstep sync).
+    Re-verified after the rework: counterclockwise drain, two-step reset,
+    30-min long break, and auto-advance-into-next-phase (tested with
+    temporarily-shrunk durations) all still pass. Exposes `syncState` +
+    `hydrate()`. Don't reintroduce a plain setInterval decrement.
+
+- **2026-06-30** — Sign-in + cross-device sync (SHIPPED, awaiting Amanda's
+  multi-device confirmation) ⏳
+  - `useAuth` (email magic link + Google via `@/integrations/lovable`),
+    `AccountControl` (top-left sign-in/account), `useCloudSync` (Realtime
+    channel `user:<id>` for lockstep + `user_settings` row for catch-up),
+    `useAudioSettings.hydrate`. Signed-out path is a no-op (local-first
+    preserved — verified). Cannot self-test real auth or 2-device lockstep;
+    needs Amanda to confirm on two signed-in devices.
+
+## Regressed`
    section with the date and suspected cause, instead of deleting it.
