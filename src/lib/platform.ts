@@ -18,6 +18,15 @@ export function isYouTubeSupported(): boolean {
   return true;
 }
 
+/**
+ * True when running inside the Electron desktop app (which is already an
+ * always-on-top window, so the browser "pop out" floating timer is redundant).
+ */
+export function isDesktopApp(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  return /electron/i.test(navigator.userAgent);
+}
+
 /** Extract a YouTube video ID from any common URL form, or return the input if it already looks like an ID. */
 export function parseYouTubeId(input: string): string | null {
   const trimmed = input.trim();

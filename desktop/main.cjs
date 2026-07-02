@@ -2,14 +2,21 @@
 // live web app, so it always stays current and has full controls, music, and
 // cross-device sync (sign in inside the window to sync with your other devices).
 
-const { app, BrowserWindow, shell } = require('electron');
+const { app, BrowserWindow, shell, screen } = require('electron');
 
 const APP_URL = 'https://rhythm-focus-pom-timer.lovable.app';
 
 function createWindow() {
+  // Open pinned to the top-left of the screen (below the menu bar), like the
+  // macOS Calendar/Weather widgets. You can still drag it anywhere afterward.
+  const { workArea } = screen.getPrimaryDisplay();
+  const MARGIN = 16;
+
   const win = new BrowserWindow({
     width: 380,
     height: 680,
+    x: workArea.x + MARGIN,
+    y: workArea.y + MARGIN,
     minWidth: 300,
     minHeight: 460,
     alwaysOnTop: true,

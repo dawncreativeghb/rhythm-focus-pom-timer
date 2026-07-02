@@ -222,7 +222,10 @@ export function YouTubePlayer({ url, shouldPlay, volume, visible, onStatus }: Yo
       initial={{ opacity: 0, y: 10 }}
       animate={visible ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}
       transition={{ duration: 0.2 }}
-      className="fixed bottom-4 right-4 z-30 w-[280px] overflow-hidden rounded-lg border border-border/50 bg-card shadow-lg sm:w-[320px]"
+      // Small windows (e.g. the desktop widget): sit small at bottom-left so the
+      // timer's bottom controls/settings stay reachable. Wider screens: float
+      // bottom-right at full size.
+      className="fixed bottom-4 left-4 z-30 w-[150px] overflow-hidden rounded-lg border border-border/50 bg-card shadow-lg sm:left-auto sm:right-4 sm:w-[320px]"
       style={{ pointerEvents: visible ? 'auto' : 'none' }}
       aria-hidden={!visible}
       aria-label="YouTube player"

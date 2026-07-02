@@ -17,7 +17,7 @@ import { ModeSwitcher } from '@/components/ModeSwitcher';
 import { YouTubePlayer } from '@/components/YouTubePlayer';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { DebugPanel, isDebugEnabled, type DebugState } from '@/components/DebugPanel';
-import { isYouTubeSupported } from '@/lib/platform';
+import { isYouTubeSupported, isDesktopApp } from '@/lib/platform';
 import { useAuth } from '@/hooks/useAuth';
 import { useCloudSync } from '@/hooks/useCloudSync';
 import { AccountControl } from '@/components/AccountControl';
@@ -208,8 +208,9 @@ const Index = () => {
     >
       <AccountControl auth={auth} />
 
-      {/* Always-visible (no scrolling) entry point for the floating timer. */}
-      {pip.isSupported && (
+      {/* Always-visible (no scrolling) entry point for the floating timer.
+          Hidden in the desktop app, which is already a floating window. */}
+      {pip.isSupported && !isDesktopApp() && (
         <button
           onClick={pip.isOpen ? pip.close : pip.open}
           className="absolute right-4 top-[max(1rem,env(safe-area-inset-top))] z-10 flex items-center gap-1.5 rounded-full bg-secondary/70 px-3 py-1.5 text-xs text-secondary-foreground backdrop-blur-sm transition-colors hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-ring"
