@@ -422,7 +422,7 @@ export function AudioSettingsModal({
                         onCheckedChange={onToggleUseYouTubeForFocus}
                       />
                     </div>
-                    {settings.useYouTubeForFocus && (
+                    {(settings.useYouTubeForFocus || settings.youtubeFocusUrl) && (
                       <Input
                         placeholder="Paste YouTube link (video or playlist)"
                         value={settings.youtubeFocusUrl}
@@ -438,7 +438,7 @@ export function AudioSettingsModal({
                         onCheckedChange={onToggleUseYouTubeForBreak}
                       />
                     </div>
-                    {settings.useYouTubeForBreak && (
+                    {(settings.useYouTubeForBreak || settings.youtubeBreakUrl) && (
                       <Input
                         placeholder="Paste YouTube link (video or playlist)"
                         value={settings.youtubeBreakUrl}
