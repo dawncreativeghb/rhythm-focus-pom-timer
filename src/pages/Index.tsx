@@ -20,7 +20,9 @@ import { DebugPanel, isDebugEnabled, type DebugState } from '@/components/DebugP
 import { isYouTubeSupported, isDesktopApp } from '@/lib/platform';
 import { useAuth } from '@/hooks/useAuth';
 import { useCloudSync } from '@/hooks/useCloudSync';
+import { useMusicQuota } from '@/hooks/useMusicQuota';
 import { AccountControl } from '@/components/AccountControl';
+import { toast } from 'sonner';
 
 const Index = () => {
   const pomodoro = usePomodoro({
@@ -69,11 +71,23 @@ const Index = () => {
       ? audioSettings.settings.useSpotifyForFocus
       : audioSettings.settings.useSpotifyForBreak);
 
+  // Free/Pro music gate: meter free music to one round a day (timer is never
+  // limited). Disabled until the Pro purchase is wired (MUSIC_GATE_ENABLED).
+  const hasLocalForMode =
+    pomodoro.mode === 'focus'
+      ? !!(audioSettings.settings.focusMusic && audioSettings.settings.focusMusicEnabled)
+      : !!(audioSettings.settings.breakMusic && audioSettings.settings.breakMusicEnabled);
+  const wantsMusicNow =
+    pomodoro.isRunning && musicEnabled && (useSpotifyNow || useYouTubeNow || hasLocalForMode);
+  const isPro = false; // TODO: read from account entitlement once IAP is wired
+  const { musicLockedForToday } = useMusicQuota({ isMusicPlaying: wantsMusicNow, isPro });
+
   // Local audio playback (only when neither Spotify nor YouTube is active)
   useAudioPlayer({
     settings: audioSettings.settings,
     mode: pomodoro.mode,
-    isRunning: pomodoro.isRunning && musicEnabled && !useSpotifyNow && !useYouTubeNow,
+    isRunning:
+      pomodoro.isRunning && musicEnabled && !useSpotifyNow && !useYouTubeNow && !musicLockedForToday,
   });
 
   // Sticky YouTube URL: only swap source when the *active* mode actually
@@ -109,7 +123,7 @@ const Index = () => {
   useEffect(() => {
     if (!spotify.isConnected || !spotify.playerReady) return;
 
-    const shouldPlay = pomodoro.isRunning && musicEnabled && useSpotifyNow;
+    const shouldPlay = pomodoro.isRunning && musicEnabled && useSpotifyNow && !musicLockedForToday;
     const uri =
       pomodoro.mode === 'focus'
         ? audioSettings.settings.spotifyFocusUri
@@ -172,11 +186,24 @@ const Index = () => {
     pomodoro.mode,
     musicEnabled,
     useSpotifyNow,
+    musicLockedForToday,
     spotify.isConnected,
     spotify.playerReady,
     audioSettings.settings.spotifyFocusUri,
     audioSettings.settings.spotifyBreakUri,
   ]);
+
+  // Gentle, one-time hand-off when the free daily music round is used up.
+  const lockNotifiedRef = useRef(false);
+  useEffect(() => {
+    if (musicLockedForToday && !lockNotifiedRef.current) {
+      lockNotifiedRef.current = true;
+      toast("That's your free music round for today", {
+        description: 'Unlock Pro for unlimited music — the timer keeps going.',
+      });
+    }
+    if (!musicLockedForToday) lockNotifiedRef.current = false;
+  }, [musicLockedForToday]);
 
   const handleMusicToggle = () => setMusicEnabled((prev) => !prev);
 
@@ -339,7 +366,7 @@ const Index = () => {
               : youtubeUrl}
             shouldPlay={debugEnabled
               ? debugRunning
-              : pomodoro.isRunning && musicEnabled && useYouTubeNow}
+              : pomodoro.isRunning && musicEnabled && useYouTubeNow && !musicLockedForToday}
             volume={audioSettings.settings.volume}
             visible={debugEnabled
               ? !!(debugMode === 'focus'
