@@ -7,10 +7,8 @@ Edit anything in **bold-bracketed** notes. Char limits are Apple's hard limits.
 
 ## 1. Core text fields
 
-**App Name** (max 30 chars) — 12 used
-> Rhythm Focus
-
-*(Option if you want search keywords in the name: `Rhythm Focus: Focus Timer` — 25 chars. Cleaner is just "Rhythm Focus." Your call.)*
+**App Name** (max 30 chars) — 25 used ✅ CONFIRMED
+> Rhythm Focus: Music Timer
 
 **Subtitle** (max 30) — 27 used
 > Pomodoro cued by your music
@@ -53,13 +51,13 @@ Edit anything in **bold-bracketed** notes. Char limits are Apple's hard limits.
 | Field | Value |
 |---|---|
 | Primary category | Productivity |
-| Secondary category | Health & Fitness *(or Lifestyle)* |
+| Secondary category | Health & Fitness ✅ CONFIRMED |
 | Support URL | https://rhythm-focus-pom-timer.lovable.app/support |
 | Marketing URL (optional) | https://rhythm-focus-pom-timer.lovable.app |
 | Privacy Policy URL | https://rhythm-focus-pom-timer.lovable.app/privacy |
 | Age rating | 4+ (no objectionable content) |
 | Copyright | © 2026 Dawn Creative |
-| Price | **Decision needed — see §6** |
+| Price | Free to download. One-time **Pro unlock $2.99** = unlimited music. ✅ |
 
 **What's New** (first release):
 > First release of Rhythm Focus. Thanks for trying it — feedback welcome via the Support page.
@@ -96,11 +94,20 @@ Suggested shots to capture from the app (I can help stage these):
 
 ---
 
-## 6. Decisions I need from you
+## 6. Monetization — DECIDED
 
-1. **Price.** In-app purchases aren't built yet, so the simplest first launch is **Free** (no IAP). Your positioning brief wanted a one-time unlock ($4.99–6.99) for Spotify/pro features later — we can add that in a follow-up update. **Recommend: launch Free, add the paid unlock after.** OK?
-2. **App name** — plain "Rhythm Focus" or the keyword version?
-3. **Secondary category** — Health & Fitness or Lifestyle?
+- **Model:** Free app + **one-time $2.99 Pro unlock**. No subscription, no ads.
+- **Free tier:** the full timer forever + **music for one round a day** (~150 min
+  allowance ≈ 4×25 focus + breaks). After that, music stops but **the timer keeps
+  running** (never blocked). Resets at local midnight. A gentle one-time toast
+  hands off to Pro.
+- **Pro ($2.99 one-time):** unlimited music. Entitlement will live on the user's
+  account so it works across devices.
+- **Status:** gate logic built & tested (`src/hooks/useMusicQuota.ts`), currently
+  **OFF** (`MUSIC_GATE_ENABLED=false`) so nothing is limited pre-launch.
+- **Remaining for money to work:** wire the Apple In-App Purchase (StoreKit, in
+  the native iOS app) to set the Pro entitlement, then flip the gate on. This is
+  the piece that gates the paid launch.
 
 ---
 
