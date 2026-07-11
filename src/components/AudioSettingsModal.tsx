@@ -349,6 +349,13 @@ export function AudioSettingsModal({
                   )}
                 </div>
 
+                {!spotify.isConnected && (
+                  <p className="text-[10px] text-muted-foreground">
+                    Connect Spotify on each device you use — the Spotify login doesn't
+                    sync across devices, but your playlist choice does.
+                  </p>
+                )}
+
                 {spotify.error && (
                   <p className="text-xs text-destructive">{spotify.error}</p>
                 )}
