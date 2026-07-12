@@ -23,26 +23,27 @@ Edit anything in **bold-bracketed** notes. Char limits are Apple's hard limits.
 
 ---
 
-## 2. Description (max 4000)
+## 2. Description (max 4000) ✅ APPROVED
 
-> Rhythm Focus is a Pomodoro timer designed for brains that notice everything — ADHD, autistic, HSP, anxious, or just worn out. It uses music as your focus cue: your playlist starts when you start and pauses on your break, so getting into focus is one tap, not a fiddly setup.
->
-> FOUR FOCUS SESSIONS, THEN A LONGER BREAK
-> The classic rhythm: four 25-minute focus sessions with 5-minute breaks, then a longer 30-minute break. A calm, counterclockwise ring shows your time draining away, and dots show where you are in the cycle.
->
-> MUSIC AS A CUE, NOT AS THERAPY
-> Connect Spotify Premium and pick a focus playlist and a break playlist. Rhythm Focus starts your music when you start, pauses it on break, and picks up where you left off. No new "focus sounds" to learn to like — just the music you already love. No Spotify? Add your own audio files instead.
->
-> DESIGNED AROUND THE TRANSITIONS
-> Sensitive and neurodivergent brains lose the most to task-switching and micro-decisions, not to the work itself. Rhythm Focus swaps your music when you change modes and handles the timing, so you don't have to. A soft, optional break chime — no harsh beeps.
->
-> PICKS UP WHERE YOU LEFT OFF, ON ANY DEVICE
-> Sign in with email or Google and your timer and settings sync in real time across your devices. Start a session on your laptop and keep watching it on your phone.
->
-> SENSORY-GENTLE BY DESIGN
-> No streaks-as-shame. No gamified nags. No harsh sounds. Plain language, honest about what it is and isn't. Your data stays yours — Rhythm Focus doesn't track you.
->
-> Rhythm Focus works with Spotify Premium today. If you don't connect a service, it still plays the ambient audio you add yourself.
+Rhythm Focus is a Pomodoro timer for brains that notice everything — ADHD, autistic, HSP, anxious, or just worn out. It uses music as your cue: your playlist starts when you start and pauses on your break. You don't have to watch a timer or touch anything — the music tells you where you are.
+
+HOW IT WORKS
+• Four 25-minute focus sessions, with short breaks between and one longer break at the end
+• A calm ring counts down; dots show where you are in the round
+• Your music starts, pauses, and resumes on its own as you move through it
+
+THE MUSIC
+• Connect Spotify Premium and pick your focus playlist — add break music too, or leave breaks quiet
+• No Spotify? Play your own audio files
+• A soft, optional chime marks the start of a break — no harsh beeps
+
+WHY IT'S DIFFERENT
+• Designed around the transitions — it handles the mode-switching and timing so you don't have to
+• Picks up where you left off, on any device — sign in and your timer + settings sync in real time; start on your laptop, keep going on your phone
+• No extra gadget — no egg timer to hear, dust, or knock off your desk. Just the devices and playlists you already have
+• No streaks, no nags, no shame, no tracking — plain and honest
+
+*(Note: YouTube is a web/desktop feature only — kept out of the App Store text since it's disabled on iOS. Use it in website/marketing copy.)*
 
 ---
 
